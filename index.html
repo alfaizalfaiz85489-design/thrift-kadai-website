@@ -951,6 +951,71 @@ document.addEventListener("click", function(e){
 var currentBest = "All";
 byId("bestTabs").addEventListener("click", function(e){ var b=e.target.closest("[data-best]"); if(b) currentBest=b.getAttribute("data-best"); });
 
+/* ---------- live catalog from the Google Sheet (owner-editable) ---------- */
+var SHEET_ID = "1Obmt0AgUz79N_M5HNkwIcyd9ZgqLOBWu1zkUlz8J-u4";
+function sheetImg(v){
+  v = String(v||"").trim();
+  if(!v) return "";
+  var m = v.match(/drive\.google\.com\/file\/d\/([^\/]+)/);
+  if(m) return "https://drive.google.com/uc?export=view&id=" + m[1];
+  if(/^https?:\/\//i.test(v)) return v;
+  return v;
+}
+function sheetNum(v, dflt){
+  var n = parseFloat(v);
+  return isNaN(n) ? dflt : n;
+}
+function splitList(v){
+  return String(v||"").split(",").map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+}
+function rerenderAll(){
+  byId("newRail").innerHTML = PRODUCTS.filter(function(p){return p.isNew}).concat(PRODUCTS.filter(function(p){return !p.isNew && p.stock>0}).slice(0,2)).map(function(p){return cardHTML(p)}).join("");
+  byId("catTiles").innerHTML = CATS.map(function(c){
+    var n = PRODUCTS.filter(function(p){return p.cat===c.name}).length;
+    return '<button class="tile" data-cat-link="'+c.name+'"><img src="'+c.img+'" alt="'+c.alt+'" loading="lazy" /><small>'+n+' pieces</small><span>'+c.name+'</span></button>';
+  }).join("");
+  hotList = PRODUCTS.filter(function(p){return p.stock>=1 && p.stock<=2});
+  renderBest(currentBest);
+  renderCatalog();
+  if(hotList.length){ renderHot(); }
+  syncCounts();
+}
+function loadSheetCatalog(){
+  var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json&sheet=Sheet1&headers=1";
+  fetch(url, {cache:"no-store"}).then(function(r){ return r.text(); }).then(function(t){
+    var a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if(a<0 || b<0) return;
+    var data = JSON.parse(t.slice(a, b+1));
+    var rows = (data.table && data.table.rows) || [];
+    var list = [];
+    rows.forEach(function(row){
+      var c = row.c || [];
+      function v(idx){ var cell = c[idx]; return cell ? cell.v : null; }
+      var name = String(v(0)||"").trim();
+      var price = sheetNum(v(2), 0);
+      if(!name || !price) return;
+      list.push({
+        id: list.length+1,
+        name: name,
+        cat: String(v(1)||"Shirts").trim(),
+        price: price,
+        mrp: sheetNum(v(3), price),
+        img: sheetImg(v(8)) || "assets/img-5-8cc2a4fb26cd.jpg",
+        alt: name,
+        sizes: splitList(v(4)),
+        outSizes: splitList(v(5)),
+        stock: Math.round(sheetNum(v(6), 0)),
+        isNew: String(v(7)||"").trim().toLowerCase() === "yes",
+        desc: String(v(9)||"").trim()
+      });
+    });
+    if(!list.length) return;
+    PRODUCTS = list;
+    rerenderAll();
+  }).catch(function(){ /* keep the built-in catalog */ });
+}
+loadSheetCatalog();
+
 syncCounts();
 renderCart();
 </script>
