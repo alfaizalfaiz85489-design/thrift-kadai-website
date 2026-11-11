@@ -667,7 +667,18 @@ byId("adminGrid").addEventListener("click", function(e){
     var p = null;
     for(var i=0;i<adminProducts.length;i++) if(adminProducts[i].docId === docId) p = adminProducts[i];
     if(!p) return;
-    if(!confirm("Remove “" + p.name + "” from the website? This cannot be undone.")) return;
+    /* Two-tap remove instead of the browser's pop-up question: the pop-up
+       is easy to miss on a phone and some browsers hide it, so the first
+       tap arms the button ("Tap again to remove") and the second tap
+       deletes the product. */
+    if(rm.getAttribute("data-armed") !== "1"){
+      rm.setAttribute("data-armed", "1");
+      rm.textContent = "Tap again to remove";
+      setTimeout(function(){ if(rm.isConnected){ rm.removeAttribute("data-armed"); rm.textContent = "Remove"; } }, 4000);
+      return;
+    }
+    rm.removeAttribute("data-armed");
+    rm.textContent = "Removing…";
     db.collection("products").doc(docId).delete().then(function(){
       loadAdminProducts();
       toast("Removed — it is gone from the website.");
