@@ -328,6 +328,9 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
 .admin-note{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-top:26px}
 .admin-note h3{margin:0 0 8px;font-size:16px}
 .admin-note p{margin:0;color:var(--muted);line-height:1.65;font-size:14px}
+.upload-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.upload-status{color:var(--muted);font-size:13px}
+.upload-preview{display:block;max-width:220px;max-height:220px;object-fit:cover;border-radius:10px;margin-top:10px;border:1px solid var(--line)}
 .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:26px}
 .edit-form .fld-full{grid-column:span 2}
 .edit-form input,.edit-form select,.edit-form textarea{height:46px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:0 12px;font:inherit;font-size:14.5px;width:100%}
@@ -378,7 +381,7 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
     <div class="empty-box" id="adminEmpty" hidden>No products yet. Tap “Add product” to put your first piece on the website.</div>
     <div class="admin-note">
       <h3>Photos</h3>
-      <p>Pick one of the website's photos from the list, or paste a Google Drive share link in the photo box. New photo? Send it on WhatsApp and it will be added to the website, then pick it here. Prices are in rupees — write just the number, no ₹ sign.</p>
+      <p>To add a new photo, tap “Upload photo from phone” inside the product form and pick a photo from your phone — no links needed. Or pick one of the website's photos from the list. Prices are in rupees — write just the number, no ₹ sign.</p>
     </div>
   </div>
 </main>
@@ -400,8 +403,12 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
       <div class="fld"><label for="fMrp">MRP ₹ (crossed-out price)</label><input id="fMrp" type="number" min="1" step="1" placeholder="999" /></div>
       <div class="fld fld-full"><label for="fSizes">Sizes (comma separated — S, M, L, XL for clothes; 30, 32, 34 for jeans/pants)</label><input id="fSizes" type="text" placeholder="S, M, L, XL" /></div>
       <div class="fld fld-full"><label for="fOut">Sold-out sizes (comma separated, leave empty if none)</label><input id="fOut" type="text" placeholder="" /></div>
-      <div class="fld fld-full"><label for="fImg">Photo — paste a Google Drive share link, or pick a website photo below</label><input id="fImg" type="text" placeholder="assets/img-5-8cc2a4fb26cd.jpg" /></div>
-      <div class="fld fld-full"><label for="fImgPick">Website photos</label>
+      <div class="fld fld-full"><label>Photo</label>
+        <div class="upload-row"><button type="button" class="btn btn-outline" id="fImgUploadBtn">Upload photo from phone</button><span class="upload-status" id="fImgStatus"></span></div>
+        <input id="fImgUpload" type="file" accept="image/*" hidden />
+        <input id="fImg" type="hidden" />
+        <img id="fImgPreview" class="upload-preview" alt="" hidden /></div>
+      <div class="fld fld-full"><label for="fImgPick">Or pick a website photo</label>
         <select id="fImgPick"><option value="">— keep the photo above —</option></select></div>
       <div class="fld fld-full"><label for="fDesc">Short description</label><textarea id="fDesc" placeholder="One or two lines about this piece"></textarea></div>
       <div class="fld"><label class="check-row"><input id="fNew" type="checkbox" /> New drop (shows in New Drop)</label></div>
@@ -525,9 +532,58 @@ function fillPhotoPick(){
     o.value = src; o.textContent = "Photo " + (i+1) + " — " + src.split("/").pop();
     sel.appendChild(o);
   });
-  sel.addEventListener("change", function(){ if(sel.value) byId("fImg").value = sel.value; });
+  sel.addEventListener("change", function(){
+    if(sel.value){ byId("fImg").value = sel.value; var pv = byId("fImgPreview"); pv.src = sel.value; pv.hidden = false; byId("fImgStatus").textContent = ""; }
+  });
 }
 fillPhotoPick();
+
+/* ---------- direct photo upload (no Drive link needed) ----------
+   The owner picks a photo from his phone. It is shrunk in the browser
+   (max 1200px, JPEG) and saved inside the product in the database, so
+   the website shows it straight away. A saved photo stays under ~750 KB,
+   well inside the 1 MB limit for one product. */
+function compressPhoto(file, done){
+  var reader = new FileReader();
+  reader.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var maxSide = 1200, q = 0.72;
+      function render(){
+        var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        var w = Math.max(1, Math.round(img.width * scale));
+        var h = Math.max(1, Math.round(img.height * scale));
+        var c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        return c.toDataURL("image/jpeg", q);
+      }
+      var url = render();
+      if(url.length > 750000 && q > 0.5){ q = 0.55; url = render(); }
+      if(url.length > 750000){ maxSide = 900; url = render(); }
+      done(url.length > 900000 ? null : url);
+    };
+    img.onerror = function(){ done(null); };
+    img.src = reader.result;
+  };
+  reader.onerror = function(){ done(null); };
+  reader.readAsDataURL(file);
+}
+byId("fImgUploadBtn").addEventListener("click", function(){ byId("fImgUpload").click(); });
+byId("fImgUpload").addEventListener("change", function(){
+  var file = this.files && this.files[0];
+  if(!file) return;
+  var st = byId("fImgStatus");
+  st.textContent = "Making the photo website-ready…";
+  compressPhoto(file, function(url){
+    if(!url){ st.textContent = "That photo could not be read — try another one."; return; }
+    byId("fImg").value = url;
+    var pv = byId("fImgPreview");
+    pv.src = url; pv.hidden = false;
+    st.textContent = "Photo ready (" + Math.round(url.length / 1024) + " KB) — tap Save product.";
+    byId("fImgPick").value = "";
+  });
+});
 
 function openEdit(docId){
   var p = null;
@@ -544,6 +600,10 @@ function openEdit(docId){
   byId("fOut").value = p ? (p.outSizes||[]).join(", ") : "";
   byId("fImg").value = p ? p.img : "";
   byId("fImgPick").value = "";
+  byId("fImgUpload").value = "";
+  byId("fImgStatus").textContent = "";
+  var pv = byId("fImgPreview");
+  if(p && p.img){ pv.src = p.img; pv.hidden = false; } else { pv.hidden = true; pv.removeAttribute("src"); }
   byId("fDesc").value = p ? (p.desc||"") : "";
   byId("fNew").checked = p ? !!p.isNew : false;
   byId("editModal").classList.add("open");
