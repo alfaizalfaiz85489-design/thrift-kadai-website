@@ -342,6 +342,12 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
 .chip.on{background:var(--ink);color:var(--bg)}
 .chip.out{background:transparent;color:var(--muted);border-color:var(--muted);text-decoration:line-through}
 .chip-hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+.photo-thumbs{display:flex;flex-wrap:wrap;gap:10px}
+.photo-thumb{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:2px solid var(--line);cursor:pointer;flex:none}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-thumb.main{border-color:var(--accent)}
+.photo-thumb .pt-main{position:absolute;left:0;right:0;bottom:0;background:var(--accent);color:#fff;font-size:10px;font-weight:800;text-align:center;padding:2px 0;letter-spacing:.05em}
+.photo-thumb .pt-x{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:0;font-size:13px;line-height:1;cursor:pointer}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:22px 26px 0}
 .modal-head h3{margin:0;font-size:22px}
 </style>
@@ -420,13 +426,12 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
       <div class="fld fld-full"><label>Sold-out sizes — tap a size that is sold out</label>
         <div class="chip-row" id="outChips"></div>
         <div class="chip-hint">Only the sizes above can be marked sold out. A sold-out size still shows on the website, crossed out.</div></div>
-      <div class="fld fld-full"><label>Photo</label>
-        <div class="upload-row"><button type="button" class="btn btn-outline" id="fImgUploadBtn">Upload photo from phone</button><span class="upload-status" id="fImgStatus"></span></div>
-        <input id="fImgUpload" type="file" accept="image/*" hidden />
-        <input id="fImg" type="hidden" />
-        <img id="fImgPreview" class="upload-preview" alt="" hidden /></div>
-      <div class="fld fld-full"><label for="fImgPick">Or pick a website photo</label>
-        <select id="fImgPick"><option value="">— keep the photo above —</option></select></div>
+      <div class="fld fld-full"><label>Photos — tap a photo to make it the main one (up to 6)</label>
+        <div class="photo-thumbs" id="photoThumbs"></div>
+        <div class="upload-row" style="margin-top:10px"><button type="button" class="btn btn-outline" id="fImgUploadBtn">Upload photos from phone</button><span class="upload-status" id="fImgStatus"></span></div>
+        <input id="fImgUpload" type="file" accept="image/*" multiple hidden /></div>
+      <div class="fld fld-full"><label for="fImgPick">Or add a website photo</label>
+        <select id="fImgPick"><option value="">— choose a photo to add —</option></select></div>
       <div class="fld fld-full"><label for="fDesc">Short description</label><textarea id="fDesc" placeholder="One or two lines about this piece"></textarea></div>
       <div class="fld"><label class="check-row"><input id="fNew" type="checkbox" /> New drop (shows in New Drop)</label></div>
       <div class="fld" style="display:flex;gap:10px;align-items:flex-end;justify-content:flex-end">
@@ -591,11 +596,12 @@ function adminCardHTML(p){
   var badge = sold ? "" : (p.isNew ? '<span class="badge sale">New</span>' : (p.stock <= 2 ? '<span class="badge low">Only '+p.stock+' left</span>' : '<span class="badge">-'+offPct(p)+'%</span>'));
   var veil = sold ? '<div class="soldout-veil"><span>Sold Out</span></div>' : '';
   var sizes = ((p.cat === "Denims" || p.cat === "Linen Pants") ? "Waist " : "Size ") + p.sizes.map(function(s){ var out = (p.outSizes||[]).indexOf(s) > -1; return out ? "<s>"+s+"</s>" : s; }).join(" · ");
+  var photoNote = (p.images && p.images.length > 1) ? " · " + p.images.length + " photos" : "";
   return '<article class="card">' +
     '<div class="card-media">' + badge + veil +
       '<img src="'+p.img+'" alt="'+p.alt+'" loading="lazy" /></div>' +
     '<div class="card-body"><span class="card-cat">'+p.cat+'</span><span class="card-name">'+p.name+'</span>' +
-    '<span class="card-sizes">'+sizes+'</span>' +
+    '<span class="card-sizes">'+sizes+photoNote+'</span>' +
     '<div class="price-row"><span class="price">'+money(p.price)+'</span><span class="mrp">'+money(p.mrp)+'</span><span class="off">'+offPct(p)+'% off</span></div></div>' +
     '<div class="admin-actions"><button class="btn-edit" data-edit="'+p.docId+'">Edit</button>' +
     '<button class="btn-remove" data-remove="'+p.docId+'">Remove</button></div></article>';
@@ -607,6 +613,8 @@ function loadAdminProducts(){
       var d = doc.data();
       d.docId = doc.id;
       d.img = driveImg(d.img);
+      d.images = (d.images || []).map(function(u){ return driveImg(u); });
+      if(!d.images.length && d.img) d.images = [d.img];
       adminProducts.push(d);
     });
     byId("adminGrid").innerHTML = adminProducts.map(adminCardHTML).join("");
@@ -626,10 +634,42 @@ function fillPhotoPick(){
     sel.appendChild(o);
   });
   sel.addEventListener("change", function(){
-    if(sel.value){ byId("fImg").value = sel.value; var pv = byId("fImgPreview"); pv.src = sel.value; pv.hidden = false; byId("fImgStatus").textContent = ""; }
+    if(sel.value){ addPhoto(sel.value); sel.value = ""; }
   });
 }
 fillPhotoPick();
+
+/* ---------- multiple photos (Flipkart-style gallery) ----------
+   A product can have up to 6 photos. The first one is the main photo
+   shown on the website card; tapping a thumbnail makes it the main one.
+   Photos live in the product's `images` list, with `img` kept as the
+   first photo so the website card keeps working. */
+var MAX_PHOTOS = 6;
+var editImages = [];
+function renderPhotoThumbs(){
+  byId("photoThumbs").innerHTML = editImages.map(function(src, i){
+    return '<div class="photo-thumb'+(i===0?" main":"")+'" data-photo="'+i+'"><img src="'+src+'" alt="" />' +
+      (i===0 ? '<span class="pt-main">MAIN</span>' : '') +
+      '<button type="button" class="pt-x" data-del="'+i+'" aria-label="Remove photo">×</button></div>';
+  }).join("");
+}
+byId("photoThumbs").addEventListener("click", function(e){
+  var del = e.target.closest("[data-del]");
+  if(del){ editImages.splice(+del.getAttribute("data-del"), 1); renderPhotoThumbs(); return; }
+  var th = e.target.closest("[data-photo]");
+  if(th){ var i = +th.getAttribute("data-photo"); if(i > 0){ var s = editImages.splice(i, 1)[0]; editImages.unshift(s); renderPhotoThumbs(); } }
+});
+function addPhoto(url){
+  var st = byId("fImgStatus");
+  if(editImages.indexOf(url) >= 0){ st.textContent = "That photo is already added."; return false; }
+  if(editImages.length >= MAX_PHOTOS){ st.textContent = "6 photos max — remove one to add another."; return false; }
+  var total = editImages.reduce(function(n, u){ return n + u.length; }, 0) + url.length;
+  if(total > 800000){ st.textContent = "These photos are too big together — try fewer photos."; return false; }
+  editImages.push(url);
+  renderPhotoThumbs();
+  st.textContent = "";
+  return true;
+}
 
 /* ---------- direct photo upload (no Drive link needed) ----------
    The owner picks a photo from his phone. It is shrunk in the browser
@@ -664,18 +704,25 @@ function compressPhoto(file, done){
 }
 byId("fImgUploadBtn").addEventListener("click", function(){ byId("fImgUpload").click(); });
 byId("fImgUpload").addEventListener("change", function(){
-  var file = this.files && this.files[0];
-  if(!file) return;
+  var files = Array.prototype.slice.call(this.files || []);
+  if(!files.length) return;
   var st = byId("fImgStatus");
-  st.textContent = "Making the photo website-ready…";
-  compressPhoto(file, function(url){
-    if(!url){ st.textContent = "That photo could not be read — try another one."; return; }
-    byId("fImg").value = url;
-    var pv = byId("fImgPreview");
-    pv.src = url; pv.hidden = false;
-    st.textContent = "Photo ready (" + Math.round(url.length / 1024) + " KB) — tap Save product.";
-    byId("fImgPick").value = "";
-  });
+  var i = 0, failed = false;
+  function next(){
+    if(i >= files.length){
+      st.textContent = failed ? "Some photos could not be added — 6 max, or too big together." : "Photo ready — tap Save product.";
+      byId("fImgUpload").value = "";
+      return;
+    }
+    if(editImages.length >= MAX_PHOTOS){ failed = true; i = files.length; next(); return; }
+    var file = files[i++];
+    st.textContent = "Making photo " + i + " of " + files.length + " website-ready…";
+    compressPhoto(file, function(url){
+      if(!url || !addPhoto(url)) failed = true;
+      next();
+    });
+  }
+  next();
 });
 
 function openEdit(docId){
@@ -692,12 +739,11 @@ function openEdit(docId){
   editSizes = p ? p.sizes.slice() : sizeSetFor("Shirts").slice();
   editOut = p ? (p.outSizes||[]).slice() : [];
   buildSizeChips();
-  byId("fImg").value = p ? p.img : "";
+  editImages = p ? ((p.images && p.images.length) ? p.images.slice() : (p.img ? [p.img] : [])) : [];
+  renderPhotoThumbs();
   byId("fImgPick").value = "";
   byId("fImgUpload").value = "";
   byId("fImgStatus").textContent = "";
-  var pv = byId("fImgPreview");
-  if(p && p.img){ pv.src = p.img; pv.hidden = false; } else { pv.hidden = true; pv.removeAttribute("src"); }
   byId("fDesc").value = p ? (p.desc||"") : "";
   byId("fNew").checked = p ? !!p.isNew : false;
   byId("editModal").classList.add("open");
@@ -726,7 +772,8 @@ byId("editSave").addEventListener("click", function(){
     cat: byId("fCat").value,
     price: price,
     mrp: mrp,
-    img: byId("fImg").value.trim() || "assets/img-5-8cc2a4fb26cd.jpg",
+    img: editImages[0] || "assets/img-5-8cc2a4fb26cd.jpg",
+    images: editImages.length ? editImages.slice() : ["assets/img-5-8cc2a4fb26cd.jpg"],
     alt: name,
     sizes: editSizes.slice(),
     outSizes: editOut.filter(function(s){ return editSizes.indexOf(s) >= 0; }),
