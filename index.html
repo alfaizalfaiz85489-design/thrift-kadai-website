@@ -610,6 +610,8 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
 
 <div class="toast" id="toast" role="status"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 var WA = "917010711860";
 var PRODUCTS = [
@@ -1014,7 +1016,50 @@ function loadSheetCatalog(){
     rerenderAll();
   }).catch(function(){ /* keep the built-in catalog */ });
 }
-loadSheetCatalog();
+/* ---------- live catalog from Firestore (owner dashboard edits) ----------
+   The owner dashboard (admin.html) saves products to Firestore. The website
+   reads them from there first; if Firestore is empty or unreachable it falls
+   back to the Google Sheet, then to the built-in catalog below. */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA9EwkERG86Dqhkne2Sd12RWjRile_FFtY",
+  authDomain: "thrift-kadai.firebaseapp.com",
+  projectId: "thrift-kadai",
+  storageBucket: "thrift-kadai.firebasestorage.app",
+  messagingSenderId: "323923656141",
+  appId: "1:323923656141:web:8ea8e784d4ecae06b21884"
+};
+function firestoreProducts(){
+  return new Promise(function(resolve){
+    if(typeof firebase === "undefined"){ resolve(null); return; }
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      var db = firebase.firestore();
+      var timer = setTimeout(function(){ resolve(null); }, 5000);
+      db.collection("products").orderBy("order").get().then(function(snap){
+        clearTimeout(timer);
+        if(snap.empty){ resolve(null); return; }
+        var list = [];
+        snap.forEach(function(doc){
+          var d = doc.data();
+          list.push({
+            id: list.length+1, docId: doc.id,
+            name: d.name || "", cat: d.cat || "Shirts",
+            price: +d.price || 0, mrp: +d.mrp || +d.price || 0,
+            img: sheetImg(d.img) || "assets/img-5-8cc2a4fb26cd.jpg",
+            alt: d.alt || d.name || "",
+            sizes: d.sizes || [], outSizes: d.outSizes || [],
+            stock: +d.stock || 0, isNew: !!d.isNew, desc: d.desc || ""
+          });
+        });
+        resolve(list.length ? list : null);
+      }).catch(function(){ clearTimeout(timer); resolve(null); });
+    }catch(e){ resolve(null); }
+  });
+}
+firestoreProducts().then(function(list){
+  if(list){ PRODUCTS = list; rerenderAll(); }
+  else { loadSheetCatalog(); }
+});
 
 syncCounts();
 renderCart();
