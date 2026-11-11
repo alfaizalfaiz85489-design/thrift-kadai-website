@@ -591,6 +591,10 @@ byId("loginPass").addEventListener("keydown", function(e){ if(e.key === "Enter")
 byId("logoutBtn").addEventListener("click", function(){ auth.signOut(); toast("Logged out"); });
 
 /* ---------- product list (same cards as the website) ---------- */
+/* The main photo a product shows on its card: the first photo in its
+   `images` list, or the old single `img` field for products saved
+   before galleries existed. */
+function mainImg(p){ var im = (p.images && p.images.length) ? p.images : [p.img]; return (im && im[0]) || "assets/img-5-8cc2a4fb26cd.jpg"; }
 function adminCardHTML(p){
   var sold = p.stock === 0;
   var badge = sold ? "" : (p.isNew ? '<span class="badge sale">New</span>' : (p.stock <= 2 ? '<span class="badge low">Only '+p.stock+' left</span>' : '<span class="badge">-'+offPct(p)+'%</span>'));
@@ -599,7 +603,7 @@ function adminCardHTML(p){
   var photoNote = (p.images && p.images.length > 1) ? " · " + p.images.length + " photos" : "";
   return '<article class="card">' +
     '<div class="card-media">' + badge + veil +
-      '<img src="'+p.img+'" alt="'+p.alt+'" loading="lazy" /></div>' +
+      '<img src="'+mainImg(p)+'" alt="'+p.alt+'" loading="lazy" /></div>' +
     '<div class="card-body"><span class="card-cat">'+p.cat+'</span><span class="card-name">'+p.name+'</span>' +
     '<span class="card-sizes">'+sizes+photoNote+'</span>' +
     '<div class="price-row"><span class="price">'+money(p.price)+'</span><span class="mrp">'+money(p.mrp)+'</span><span class="off">'+offPct(p)+'% off</span></div></div>' +
@@ -661,21 +665,24 @@ byId("photoThumbs").addEventListener("click", function(e){
 });
 function addPhoto(url){
   var st = byId("fImgStatus");
-  if(editImages.indexOf(url) >= 0){ st.textContent = "That photo is already added."; return false; }
-  if(editImages.length >= MAX_PHOTOS){ st.textContent = "6 photos max — remove one to add another."; return false; }
+  if(editImages.indexOf(url) >= 0){ addPhotoError = "dup"; st.textContent = "That photo is already added."; return false; }
+  if(editImages.length >= MAX_PHOTOS){ addPhotoError = "max"; st.textContent = "6 photos max — remove one to add another."; return false; }
   var total = editImages.reduce(function(n, u){ return n + u.length; }, 0) + url.length;
-  if(total > 800000){ st.textContent = "These photos are too big together — try fewer photos."; return false; }
+  if(total > 950000){ addPhotoError = "size"; st.textContent = "These photos are too big together — try fewer photos."; return false; }
+  addPhotoError = "";
   editImages.push(url);
   renderPhotoThumbs();
   st.textContent = "";
   return true;
 }
+var addPhotoError = "";
 
 /* ---------- direct photo upload (no Drive link needed) ----------
-   The owner picks a photo from his phone. It is shrunk in the browser
-   (max 1200px, JPEG) and saved inside the product in the database, so
-   the website shows it straight away. A saved photo stays under ~750 KB,
-   well inside the 1 MB limit for one product. */
+   The owner picks photos from his phone. Each one is shrunk in the
+   browser and saved inside the product in the database, so the website
+   shows it straight away. Phone photos of detailed fabric stay big even
+   shrunk, so each photo is aimed under ~400 KB — a product holds up to
+   6 photos and the database allows 1 MB per product. */
 function compressPhoto(file, done){
   var reader = new FileReader();
   reader.onload = function(){
@@ -692,8 +699,8 @@ function compressPhoto(file, done){
         return c.toDataURL("image/jpeg", q);
       }
       var url = render();
-      if(url.length > 750000 && q > 0.5){ q = 0.55; url = render(); }
-      if(url.length > 750000){ maxSide = 900; url = render(); }
+      if(url.length > 400000){ q = 0.6; maxSide = 1000; url = render(); }
+      if(url.length > 400000){ q = 0.5; maxSide = 900; url = render(); }
       done(url.length > 900000 ? null : url);
     };
     img.onerror = function(){ done(null); };
@@ -707,18 +714,25 @@ byId("fImgUpload").addEventListener("change", function(){
   var files = Array.prototype.slice.call(this.files || []);
   if(!files.length) return;
   var st = byId("fImgStatus");
-  var i = 0, failed = false;
+  var i = 0, failedMax = false, failedSize = false;
   function next(){
     if(i >= files.length){
-      st.textContent = failed ? "Some photos could not be added — 6 max, or too big together." : "Photo ready — tap Save product.";
+      st.textContent = (failedMax && failedSize) ? "Some photos could not be added — 6 photos max, and some were too big together."
+        : failedMax ? "6 photos max — remove one to add another."
+        : failedSize ? "Some photos were too big to add — try fewer photos, or a closer shot."
+        : "Photo ready — tap Save product.";
       byId("fImgUpload").value = "";
       return;
     }
-    if(editImages.length >= MAX_PHOTOS){ failed = true; i = files.length; next(); return; }
+    if(editImages.length >= MAX_PHOTOS){ failedMax = true; i = files.length; next(); return; }
     var file = files[i++];
     st.textContent = "Making photo " + i + " of " + files.length + " website-ready…";
     compressPhoto(file, function(url){
-      if(!url || !addPhoto(url)) failed = true;
+      if(!url){ failedSize = true; next(); return; }
+      if(!addPhoto(url)){
+        if(addPhotoError === "max") failedMax = true;
+        else if(addPhotoError === "size") failedSize = true;
+      }
       next();
     });
   }
@@ -755,6 +769,12 @@ byId("editCancel").addEventListener("click", closeEdit);
 byId("editModal").addEventListener("click", function(e){ if(e.target === this) closeEdit(); });
 document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeEdit(); });
 
+function saveErrorText(e){
+  var m = ((e && (e.message || "")) + " " + (e && (e.code || "")));
+  if(/large|too big|exceed|invalid-argument/i.test(m)) return "The photos are too big together — remove one photo and try again.";
+  return "Could not save. Check your internet and try again.";
+}
+
 byId("editSave").addEventListener("click", function(){
   var err = byId("editErr");
   err.textContent = "";
@@ -772,7 +792,10 @@ byId("editSave").addEventListener("click", function(){
     cat: byId("fCat").value,
     price: price,
     mrp: mrp,
-    img: editImages[0] || "assets/img-5-8cc2a4fb26cd.jpg",
+    /* No `img` field any more: the first photo used to be saved twice
+       (once as `img`, once inside `images`), and with big phone photos
+       that pushed the product over the database's 1 MB limit, so saving
+       failed. The main photo is now read from `images[0]` instead. */
     images: editImages.length ? editImages.slice() : ["assets/img-5-8cc2a4fb26cd.jpg"],
     alt: name,
     sizes: editSizes.slice(),
@@ -790,12 +813,14 @@ byId("editSave").addEventListener("click", function(){
     toast(msg);
   }
   if(editingDoc){
-    db.collection("products").doc(editingDoc).update(fields).then(function(){ done("Saved — the website is updated."); }).catch(function(){ btn.textContent = "Save product"; err.textContent = "Could not save. Check your internet and try again."; });
+    /* Drop the old duplicated `img` copy on this product. */
+    fields.img = firebase.firestore.FieldValue.delete();
+    db.collection("products").doc(editingDoc).update(fields).then(function(){ done("Saved — the website is updated."); }).catch(function(e){ btn.textContent = "Save product"; err.textContent = saveErrorText(e); });
   } else {
     var maxOrder = 0;
     adminProducts.forEach(function(p){ if(p.order > maxOrder) maxOrder = p.order; });
     fields.order = maxOrder + 1;
-    db.collection("products").add(fields).then(function(){ done("Added — the new piece is on the website."); }).catch(function(){ btn.textContent = "Save product"; err.textContent = "Could not save. Check your internet and try again."; });
+    db.collection("products").add(fields).then(function(){ done("Added — the new piece is on the website."); }).catch(function(e){ btn.textContent = "Save product"; err.textContent = saveErrorText(e); });
   }
 });
 

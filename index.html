@@ -643,6 +643,10 @@ function prod(id){ for(var i=0;i<PRODUCTS.length;i++) if(PRODUCTS[i].id===id) re
 /* A product's photos: the `images` list when the owner added more than
    one, otherwise just the single main photo. */
 function prodImages(p){ return (p && p.images && p.images.length) ? p.images : [p.img]; }
+/* The main photo a product shows on its card: the first photo in its
+   `images` list, or the old single `img` field for products saved
+   before galleries existed. */
+function mainImg(p){ var im = prodImages(p); return (im && im[0]) || "assets/img-5-8cc2a4fb26cd.jpg"; }
 function toast(msg){ var t=byId("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("on")},2600); }
 
 /* wishlist + cart (this session only) */
@@ -668,7 +672,7 @@ function cardHTML(p, extraClass){
   var sizes = isWaist ? "Waist " + p.sizes.join(" · ") : "Size " + p.sizes.join(" · ");
   return '<article class="card '+(extraClass||"")+'">' +
     '<div class="card-media">' + badge + veil +
-      '<img src="'+p.img+'" alt="'+p.alt+'" loading="lazy" />' +
+      '<img src="'+mainImg(p)+'" alt="'+p.alt+'" loading="lazy" />' +
       '<button class="wish-btn'+(wishlist[p.id]?" active":"")+'" data-wish="'+p.id+'" aria-label="Add to wishlist"><svg viewBox="0 0 24 24" fill="'+(wishlist[p.id]?"currentColor":"none")+'" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20.7C6.4 17 3 13.6 3 9.9 3 7.2 5 5 7.6 5c1.7 0 3.4 1 4.4 2.6C13 6 14.7 5 16.4 5 19 5 21 7.2 21 9.9c0 3.7-3.4 7.1-9 10.8Z"/></svg></button>' +
       (sold ? "" : '<div class="card-actions"><button class="ca-qv" data-qv="'+p.id+'">Quick view</button><button class="ca-add" data-add="'+p.id+'">Add to cart</button></div>') +
     '</div>' +
@@ -726,7 +730,7 @@ var hotList = PRODUCTS.filter(function(p){return p.stock>=1 && p.stock<=2});
 var hotIdx = 0;
 function renderHot(){
   var p = hotList[hotIdx % hotList.length];
-  byId("hotCard").innerHTML = '<img src="'+p.img+'" alt="'+p.alt+'" /><div><div class="hc-k">Hot this week</div><h3>'+p.name+'</h3><p>Only '+p.stock+' left · '+p.cat+'</p><div class="price-row"><span class="price">'+money(p.price)+'</span><span class="off" style="color:#ffb59d">'+offPct(p)+'% off</span></div><button class="btn btn-accent" data-qv="'+p.id+'" style="margin-top:12px;padding:10px 18px;font-size:13px">Grab it before it goes</button></div>';
+  byId("hotCard").innerHTML = '<img src="'+mainImg(p)+'" alt="'+p.alt+'" /><div><div class="hc-k">Hot this week</div><h3>'+p.name+'</h3><p>Only '+p.stock+' left · '+p.cat+'</p><div class="price-row"><span class="price">'+money(p.price)+'</span><span class="off" style="color:#ffb59d">'+offPct(p)+'% off</span></div><button class="btn btn-accent" data-qv="'+p.id+'" style="margin-top:12px;padding:10px 18px;font-size:13px">Grab it before it goes</button></div>';
 }
 renderHot();
 setInterval(function(){ hotIdx++; renderHot(); }, 5000);
@@ -863,7 +867,7 @@ function renderCart(){
   } else {
     box.innerHTML = cart.map(function(c, i){
       var p = prod(c.id);
-      return '<div class="cart-item"><img src="'+p.img+'" alt="'+p.alt+'" /><div><div class="ci-name">'+p.name+'</div><div class="ci-meta">Size '+c.size+' · '+money(p.price)+'</div>' +
+      return '<div class="cart-item"><img src="'+mainImg(p)+'" alt="'+p.alt+'" /><div><div class="ci-name">'+p.name+'</div><div class="ci-meta">Size '+c.size+' · '+money(p.price)+'</div>' +
       '<span class="qty"><button data-dec="'+i+'" aria-label="Less">−</button><span style="min-width:24px;text-align:center;font-weight:800">'+c.qty+'</span><button data-inc="'+i+'" aria-label="More">+</button></span></div>' +
       '<div class="ci-right"><strong>'+money(p.price*c.qty)+'</strong><button class="ci-remove" data-rm="'+i+'">Remove</button></div></div>';
     }).join("");
@@ -925,7 +929,7 @@ function deliveryText(){
 function openQV(id){
   var p = prod(id); if(!p) return;
   qv = { id:id, size:null, qty:1 };
-  byId("qvImg").src = p.img; byId("qvImg").alt = p.alt;
+  byId("qvImg").src = mainImg(p); byId("qvImg").alt = p.alt;
   var qvImgs = prodImages(p);
   byId("qvThumbs").innerHTML = qvImgs.map(function(u, i){
     return '<img src="'+u+'" alt="" data-qvthumb="'+i+'" class="'+(i===0?"on":"")+'" />';
@@ -950,7 +954,7 @@ function openQV(id){
   byId("qvBuy").textContent = p.stock===0 ? "Ask on WhatsApp" : "Buy it now";
   var also = PRODUCTS.filter(function(x){ return x.cat===p.cat && x.id!==p.id; }).slice(0,3);
   byId("qvAlso").innerHTML = also.map(function(x){
-    return '<button class="also-item" data-qv="'+x.id+'"><img src="'+x.img+'" alt="'+x.alt+'" loading="lazy" /><div><div class="an">'+x.name+'</div><div class="ap">'+money(x.price)+(x.stock===0?' · Sold out':'')+'</div></div></button>';
+    return '<button class="also-item" data-qv="'+x.id+'"><img src="'+mainImg(x)+'" alt="'+x.alt+'" loading="lazy" /><div><div class="an">'+x.name+'</div><div class="ap">'+money(x.price)+(x.stock===0?' · Sold out':'')+'</div></div></button>';
   }).join("");
   byId("qvModal").classList.add("open");
 }
