@@ -337,6 +337,11 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
 .edit-form textarea{height:auto;min-height:88px;padding:12px;resize:vertical}
 .check-row{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px}
 .check-row input{width:19px;height:19px;accent-color:var(--accent)}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:999px;padding:9px 15px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+.chip.on{background:var(--ink);color:var(--bg)}
+.chip.out{background:transparent;color:var(--muted);border-color:var(--muted);text-decoration:line-through}
+.chip-hint{font-size:12.5px;color:var(--muted);margin-top:6px}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:22px 26px 0}
 .modal-head h3{margin:0;font-size:22px}
 </style>
@@ -409,8 +414,12 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
       <div class="fld"><label for="fStock">Stock left (0 = sold out)</label><input id="fStock" type="number" min="0" step="1" value="1" /></div>
       <div class="fld"><label for="fPrice">Price ₹</label><input id="fPrice" type="number" min="1" step="1" placeholder="499" /></div>
       <div class="fld"><label for="fMrp">MRP ₹ (crossed-out price)</label><input id="fMrp" type="number" min="1" step="1" placeholder="999" /></div>
-      <div class="fld fld-full"><label for="fSizes">Sizes (comma separated — S, M, L, XL for clothes; 30, 32, 34 for jeans/pants)</label><input id="fSizes" type="text" placeholder="S, M, L, XL" /></div>
-      <div class="fld fld-full"><label for="fOut">Sold-out sizes (comma separated, leave empty if none)</label><input id="fOut" type="text" placeholder="" /></div>
+      <div class="fld fld-full"><label>Sizes — tap the sizes this piece has</label>
+        <div class="chip-row" id="sizeChips"></div>
+        <div class="chip-hint" id="sizeHint"></div></div>
+      <div class="fld fld-full"><label>Sold-out sizes — tap a size that is sold out</label>
+        <div class="chip-row" id="outChips"></div>
+        <div class="chip-hint">Only the sizes above can be marked sold out. A sold-out size still shows on the website, crossed out.</div></div>
       <div class="fld fld-full"><label>Photo</label>
         <div class="upload-row"><button type="button" class="btn btn-outline" id="fImgUploadBtn">Upload photo from phone</button><span class="upload-status" id="fImgStatus"></span></div>
         <input id="fImgUpload" type="file" accept="image/*" hidden />
@@ -446,7 +455,7 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
         <img id="cImgPreview" class="upload-preview" alt="" hidden /></div>
       <div class="fld fld-full"><label for="cImgPick">Or pick a website photo</label>
         <select id="cImgPick"><option value="">— keep the photo above —</option></select></div>
-      <div class="fld"><label class="check-row"><input id="cWaist" type="checkbox" /> Sizes are waist sizes (30, 32, 34)</label></div>
+      <div class="fld"><label class="check-row"><input id="cWaist" type="checkbox" /> Sizes are waist sizes (28–36)</label></div>
       <div class="err" id="catErr"></div>
       <div class="fld" style="display:flex;gap:10px;align-items:flex-end;justify-content:flex-end">
         <button class="btn btn-outline" id="catCancel">Cancel</button>
@@ -494,6 +503,50 @@ function money(n){ return "₹" + Number(n).toLocaleString("en-IN"); }
 function offPct(p){ return Math.round((1 - p.price/p.mrp)*100); }
 function toast(msg){ var t=byId("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("on")},2600); }
 function splitList(v){ return String(v||"").split(",").map(function(s){ return s.trim(); }).filter(function(s){ return s; }); }
+
+/* ---------- sizes: tap-to-choose chips ----------
+   Top wear gets S–XXL, waist categories (Denims, Linen Pants, or any
+   category with the waist flag) get 28–36. A size the product already
+   has but that is not in the standard set is kept as an extra chip, so
+   editing never silently drops a size. */
+var SIZE_TOP = ["S","M","L","XL","XXL"];
+var SIZE_WAIST = ["28","30","32","34","36"];
+var editSizes = [];
+var editOut = [];
+function catIsWaist(name){
+  for(var i=0;i<adminCats.length;i++) if(adminCats[i].name === name) return !!adminCats[i].waist;
+  return name === "Denims" || name === "Linen Pants";
+}
+function sizeSetFor(cat){ return catIsWaist(cat) ? SIZE_WAIST : SIZE_TOP; }
+function buildSizeChips(){
+  var cat = byId("fCat").value;
+  var set = sizeSetFor(cat);
+  var all = set.slice();
+  editSizes.forEach(function(s){ if(all.indexOf(s) < 0) all.push(s); });
+  editOut = editOut.filter(function(s){ return editSizes.indexOf(s) >= 0; });
+  byId("sizeChips").innerHTML = all.map(function(s){
+    return '<button type="button" class="chip'+(editSizes.indexOf(s) >= 0 ? " on" : "")+'" data-size="'+s+'">'+s+'</button>';
+  }).join("");
+  byId("outChips").innerHTML = editSizes.map(function(s){
+    return '<button type="button" class="chip'+(editOut.indexOf(s) >= 0 ? " out" : "")+'" data-out="'+s+'">'+s+'</button>';
+  }).join("");
+  byId("sizeHint").textContent = catIsWaist(cat) ? "Waist sizes 28 to 36 — tap to add or remove." : "Sizes S to XXL — tap to add or remove.";
+}
+byId("sizeChips").addEventListener("click", function(e){
+  var b = e.target.closest("[data-size]"); if(!b) return;
+  var s = b.getAttribute("data-size");
+  var i = editSizes.indexOf(s);
+  if(i >= 0) editSizes.splice(i, 1); else editSizes.push(s);
+  buildSizeChips();
+});
+byId("outChips").addEventListener("click", function(e){
+  var b = e.target.closest("[data-out]"); if(!b) return;
+  var s = b.getAttribute("data-out");
+  var i = editOut.indexOf(s);
+  if(i >= 0) editOut.splice(i, 1); else editOut.push(s);
+  buildSizeChips();
+});
+byId("fCat").addEventListener("change", function(){ buildSizeChips(); });
 function driveImg(v){
   v = String(v||"").trim();
   if(!v) return "";
@@ -632,8 +685,9 @@ function openEdit(docId){
   byId("fStock").value = p ? p.stock : 1;
   byId("fPrice").value = p ? p.price : "";
   byId("fMrp").value = p ? p.mrp : "";
-  byId("fSizes").value = p ? p.sizes.join(", ") : "";
-  byId("fOut").value = p ? (p.outSizes||[]).join(", ") : "";
+  editSizes = p ? p.sizes.slice() : sizeSetFor("Shirts").slice();
+  editOut = p ? (p.outSizes||[]).slice() : [];
+  buildSizeChips();
   byId("fImg").value = p ? p.img : "";
   byId("fImgPick").value = "";
   byId("fImgUpload").value = "";
@@ -660,6 +714,7 @@ byId("editSave").addEventListener("click", function(){
   var stock = parseInt(byId("fStock").value, 10);
   if(!name){ err.textContent = "Give the product a name."; return; }
   if(!price || price < 1){ err.textContent = "Put a price (just the number)."; return; }
+  if(editSizes.length === 0){ err.textContent = "Tap at least one size for this piece."; return; }
   if(!mrp || mrp < price) mrp = price;
   if(isNaN(stock) || stock < 0) stock = 0;
   var fields = {
@@ -669,8 +724,8 @@ byId("editSave").addEventListener("click", function(){
     mrp: mrp,
     img: byId("fImg").value.trim() || "assets/img-5-8cc2a4fb26cd.jpg",
     alt: name,
-    sizes: splitList(byId("fSizes").value),
-    outSizes: splitList(byId("fOut").value),
+    sizes: editSizes.slice(),
+    outSizes: editOut.filter(function(s){ return editSizes.indexOf(s) >= 0; }),
     stock: stock,
     isNew: byId("fNew").checked,
     desc: byId("fDesc").value.trim()
@@ -742,7 +797,7 @@ function renderCatGrid(){
     return '<article class="card">' +
       '<div class="card-media"><img src="'+c.img+'" alt="'+c.alt+'" loading="lazy" /></div>' +
       '<div class="card-body"><span class="card-name">'+c.name+'</span>' +
-      '<span class="card-sizes">'+catCount(c.name)+' pieces · '+(c.waist ? 'waist sizes' : 'sizes S–XL')+'</span></div>' +
+      '<span class="card-sizes">'+catCount(c.name)+' pieces · '+(c.waist ? 'waist sizes' : 'sizes S–XXL')+'</span></div>' +
       '<div class="admin-actions"><button class="btn-edit" data-cat-edit="'+c.docId+'">Edit</button>' +
       '<button class="btn-remove" data-cat-remove="'+c.docId+'">Remove</button></div></article>';
   }).join("");
