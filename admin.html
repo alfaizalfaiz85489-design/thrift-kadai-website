@@ -383,6 +383,14 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
       <h3>Photos</h3>
       <p>To add a new photo, tap “Upload photo from phone” inside the product form and pick a photo from your phone — no links needed. Or pick one of the website's photos from the list. Prices are in rupees — write just the number, no ₹ sign.</p>
     </div>
+    <div class="dash-head" style="margin-top:34px">
+      <div><h2>Categories</h2><p>These are the boxes on the website's “Shop by category” row. Add a new one, change its photo, or remove it. A category that still has pieces in it cannot be removed — remove or move its pieces first.</p></div>
+      <div class="dash-actions">
+        <button class="btn btn-accent" id="addCatBtn">+ Add category</button>
+      </div>
+    </div>
+    <div class="grid c4" id="adminCatGrid"></div>
+    <div class="empty-box" id="adminCatEmpty" hidden>No categories yet.</div>
   </div>
 </main>
 
@@ -417,6 +425,33 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
         <button class="btn btn-accent" id="editSave">Save product</button>
       </div>
       <div class="err fld-full" id="editErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY EDIT / ADD -->
+<div class="modal" id="catModal" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="catTitle">Add category</h3>
+      <button class="x-btn" id="catClose" aria-label="Close" style="position:static">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="19"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="edit-form">
+      <div class="fld fld-full"><label for="cName">Category name</label><input id="cName" type="text" placeholder="e.g. Shorts" /></div>
+      <div class="fld fld-full"><label>Photo</label>
+        <div class="upload-row"><button type="button" class="btn btn-outline" id="cImgUploadBtn">Upload photo from phone</button><span class="upload-status" id="cImgStatus"></span></div>
+        <input id="cImgUpload" type="file" accept="image/*" hidden />
+        <input id="cImg" type="hidden" />
+        <img id="cImgPreview" class="upload-preview" alt="" hidden /></div>
+      <div class="fld fld-full"><label for="cImgPick">Or pick a website photo</label>
+        <select id="cImgPick"><option value="">— keep the photo above —</option></select></div>
+      <div class="fld"><label class="check-row"><input id="cWaist" type="checkbox" /> Sizes are waist sizes (30, 32, 34)</label></div>
+      <div class="err" id="catErr"></div>
+      <div class="fld" style="display:flex;gap:10px;align-items:flex-end;justify-content:flex-end">
+        <button class="btn btn-outline" id="catCancel">Cancel</button>
+        <button class="btn btn-accent" id="catSave">Save category</button>
+      </div>
     </div>
   </div>
 </div>
@@ -471,7 +506,7 @@ function driveImg(v){
 function showLogin(){ byId("loginView").hidden = false; byId("dashView").hidden = true; }
 function showDash(){ byId("loginView").hidden = true; byId("dashView").hidden = false; }
 auth.onAuthStateChanged(function(u){
-  if(u){ showDash(); loadAdminProducts(); }
+  if(u){ showDash(); loadAdminProducts(); loadAdminCats(); }
   else { showLogin(); }
 });
 function doLogin(){
@@ -519,6 +554,7 @@ function loadAdminProducts(){
     });
     byId("adminGrid").innerHTML = adminProducts.map(adminCardHTML).join("");
     byId("adminEmpty").hidden = adminProducts.length > 0;
+    if(adminCats.length) renderCatGrid();
   }).catch(function(){
     toast("Could not load products — check your internet and try again.");
   });
@@ -681,6 +717,187 @@ byId("adminGrid").addEventListener("click", function(e){
     rm.textContent = "Removing…";
     db.collection("products").doc(docId).delete().then(function(){
       loadAdminProducts();
+      toast("Removed — it is gone from the website.");
+    }).catch(function(){ toast("Could not remove. Check your internet and try again."); });
+  }
+});
+
+/* ---------- categories (the "Shop by category" boxes) ---------- */
+var DEFAULT_CATS = [
+  {name:"Shirts", img:"assets/img-5-8cc2a4fb26cd.jpg", alt:"Checkered shirt on a hanger", waist:false, order:1},
+  {name:"T-Shirts", img:"assets/img-8-d679525a9431.jpg", alt:"Oversized t-shirt on a model", waist:false, order:2},
+  {name:"Denims", img:"assets/img-11-2aaf59b9092a.jpg", alt:"Blue denim jeans", waist:true, order:3},
+  {name:"Linen Pants", img:"assets/img-14-e6aeca477c55.jpg", alt:"Linen pants", waist:true, order:4}
+];
+var adminCats = [];
+var editingCat = null;
+
+function catCount(name){
+  var n = 0;
+  adminProducts.forEach(function(p){ if(p.cat === name) n++; });
+  return n;
+}
+function renderCatGrid(){
+  byId("adminCatGrid").innerHTML = adminCats.map(function(c){
+    return '<article class="card">' +
+      '<div class="card-media"><img src="'+c.img+'" alt="'+c.alt+'" loading="lazy" /></div>' +
+      '<div class="card-body"><span class="card-name">'+c.name+'</span>' +
+      '<span class="card-sizes">'+catCount(c.name)+' pieces · '+(c.waist ? 'waist sizes' : 'sizes S–XL')+'</span></div>' +
+      '<div class="admin-actions"><button class="btn-edit" data-cat-edit="'+c.docId+'">Edit</button>' +
+      '<button class="btn-remove" data-cat-remove="'+c.docId+'">Remove</button></div></article>';
+  }).join("");
+  byId("adminCatEmpty").hidden = adminCats.length > 0;
+}
+function fillProductCatSelect(){
+  var sel = byId("fCat");
+  var cur = sel.value;
+  sel.innerHTML = adminCats.map(function(c){ return '<option>'+c.name+'</option>'; }).join("") || "<option>Shirts</option>";
+  if(adminCats.some(function(c){ return c.name===cur; })) sel.value = cur;
+}
+function loadAdminCats(){
+  db.collection("categories").orderBy("order").get().then(function(snap){
+    if(snap.empty){
+      /* First time: save the four categories the website already shows,
+         so the dashboard starts from the same list. */
+      var batch = db.batch();
+      DEFAULT_CATS.forEach(function(c){ batch.set(db.collection("categories").doc(), c); });
+      return batch.commit().then(function(){ loadAdminCats(); });
+    }
+    adminCats = [];
+    snap.forEach(function(doc){
+      var d = doc.data();
+      d.docId = doc.id;
+      d.img = driveImg(d.img);
+      adminCats.push(d);
+    });
+    renderCatGrid();
+    fillProductCatSelect();
+  }).catch(function(){
+    toast("Could not load categories — check your internet and try again.");
+  });
+}
+
+/* ---------- category edit / add ---------- */
+function fillCatPhotoPick(){
+  var sel = byId("cImgPick");
+  ASSET_PHOTOS.forEach(function(src, i){
+    var o = document.createElement("option");
+    o.value = src; o.textContent = "Photo " + (i+1) + " — " + src.split("/").pop();
+    sel.appendChild(o);
+  });
+  sel.addEventListener("change", function(){
+    if(sel.value){ byId("cImg").value = sel.value; var pv = byId("cImgPreview"); pv.src = sel.value; pv.hidden = false; byId("cImgStatus").textContent = ""; }
+  });
+}
+fillCatPhotoPick();
+
+byId("cImgUploadBtn").addEventListener("click", function(){ byId("cImgUpload").click(); });
+byId("cImgUpload").addEventListener("change", function(){
+  var file = this.files && this.files[0];
+  if(!file) return;
+  var st = byId("cImgStatus");
+  st.textContent = "Making the photo website-ready…";
+  compressPhoto(file, function(url){
+    if(!url){ st.textContent = "That photo could not be read — try another one."; return; }
+    byId("cImg").value = url;
+    var pv = byId("cImgPreview");
+    pv.src = url; pv.hidden = false;
+    st.textContent = "Photo ready (" + Math.round(url.length / 1024) + " KB) — tap Save category.";
+    byId("cImgPick").value = "";
+  });
+});
+
+function openCatEdit(docId){
+  var c = null;
+  if(docId){ for(var i=0;i<adminCats.length;i++) if(adminCats[i].docId === docId) c = adminCats[i]; }
+  editingCat = docId || null;
+  byId("catTitle").textContent = c ? "Edit category" : "Add category";
+  byId("catErr").textContent = "";
+  byId("cName").value = c ? c.name : "";
+  byId("cImg").value = c ? c.img : "";
+  byId("cImgPick").value = "";
+  byId("cImgUpload").value = "";
+  byId("cImgStatus").textContent = "";
+  var pv = byId("cImgPreview");
+  if(c && c.img){ pv.src = c.img; pv.hidden = false; } else { pv.hidden = true; pv.removeAttribute("src"); }
+  byId("cWaist").checked = c ? !!c.waist : false;
+  byId("catModal").classList.add("open");
+}
+function closeCat(){ byId("catModal").classList.remove("open"); }
+byId("addCatBtn").addEventListener("click", function(){ openCatEdit(null); });
+byId("catClose").addEventListener("click", closeCat);
+byId("catCancel").addEventListener("click", closeCat);
+byId("catModal").addEventListener("click", function(e){ if(e.target === this) closeCat(); });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeCat(); });
+
+byId("catSave").addEventListener("click", function(){
+  var err = byId("catErr");
+  err.textContent = "";
+  var name = byId("cName").value.trim();
+  if(!name){ err.textContent = "Give the category a name."; return; }
+  var dup = null;
+  adminCats.forEach(function(c){ if(c.name.toLowerCase() === name.toLowerCase() && c.docId !== editingCat) dup = c; });
+  if(dup){ err.textContent = "There is already a category called “" + dup.name + "”."; return; }
+  var oldName = null;
+  if(editingCat){ for(var i=0;i<adminCats.length;i++) if(adminCats[i].docId === editingCat) oldName = adminCats[i].name; }
+  var fields = {
+    name: name,
+    img: byId("cImg").value.trim() || "assets/img-5-8cc2a4fb26cd.jpg",
+    alt: name,
+    waist: byId("cWaist").checked
+  };
+  var btn = byId("catSave");
+  btn.textContent = "Saving…";
+  function done(msg){
+    btn.textContent = "Save category";
+    closeCat();
+    loadAdminCats();
+    loadAdminProducts();
+    toast(msg);
+  }
+  function renameProducts(){
+    /* Renaming a category renames it on all its pieces too. */
+    if(!oldName || oldName === name) return Promise.resolve();
+    return db.collection("products").where("cat", "==", oldName).get().then(function(snap){
+      var batch = db.batch();
+      snap.forEach(function(doc){ batch.update(doc.ref, {cat: name}); });
+      return batch.commit();
+    });
+  }
+  if(editingCat){
+    db.collection("categories").doc(editingCat).update(fields).then(function(){
+      return renameProducts();
+    }).then(function(){ done("Saved — the website is updated."); }).catch(function(){ btn.textContent = "Save category"; err.textContent = "Could not save. Check your internet and try again."; });
+  } else {
+    var maxOrder = 0;
+    adminCats.forEach(function(c){ if(c.order > maxOrder) maxOrder = c.order; });
+    fields.order = maxOrder + 1;
+    db.collection("categories").add(fields).then(function(){ done("Added — the new category is on the website."); }).catch(function(){ btn.textContent = "Save category"; err.textContent = "Could not save. Check your internet and try again."; });
+  }
+});
+
+/* ---------- category remove (two taps, like products) ---------- */
+byId("adminCatGrid").addEventListener("click", function(e){
+  var ed = e.target.closest("[data-cat-edit]");
+  if(ed){ openCatEdit(ed.getAttribute("data-cat-edit")); return; }
+  var rm = e.target.closest("[data-cat-remove]");
+  if(rm){
+    var docId = rm.getAttribute("data-cat-remove");
+    var c = null;
+    for(var i=0;i<adminCats.length;i++) if(adminCats[i].docId === docId) c = adminCats[i];
+    if(!c) return;
+    var n = catCount(c.name);
+    if(n > 0){ toast("“" + c.name + "” still has " + n + " piece" + (n===1 ? "" : "s") + " — remove or move them first."); return; }
+    if(rm.getAttribute("data-armed") !== "1"){
+      rm.setAttribute("data-armed", "1");
+      rm.textContent = "Tap again to remove";
+      setTimeout(function(){ if(rm.isConnected){ rm.removeAttribute("data-armed"); rm.textContent = "Remove"; } }, 4000);
+      return;
+    }
+    rm.removeAttribute("data-armed");
+    rm.textContent = "Removing…";
+    db.collection("categories").doc(docId).delete().then(function(){
+      loadAdminCats();
       toast("Removed — it is gone from the website.");
     }).catch(function(){ toast("Could not remove. Check your internet and try again."); });
   }

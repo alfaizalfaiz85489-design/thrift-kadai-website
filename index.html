@@ -348,10 +348,10 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
   </button>
   <a href="#new-drop">New Drop</a>
-  <a href="#shop" data-cat-link="Shirts">Shirts</a>
+  <span id="drawerCatLinks"><a href="#shop" data-cat-link="Shirts">Shirts</a>
   <a href="#shop" data-cat-link="T-Shirts">T-Shirts</a>
   <a href="#shop" data-cat-link="Denims">Denims</a>
-  <a href="#shop" data-cat-link="Linen Pants">Linen Pants</a>
+  <a href="#shop" data-cat-link="Linen Pants">Linen Pants</a></span>
   <a href="#best">Best Sellers</a>
   <a href="#visit">Visit Store</a>
   <div class="dfoot">Thrift Kadai — Budget Fashion<br/>Avaniyapuram, Madurai<br/><a href="tel:+917010711860" style="text-transform:none;letter-spacing:0;border:0;padding:0;font-size:14px">+91 70107 11860</a></div>
@@ -522,8 +522,8 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
     <div>
       <h4>Shop</h4>
       <a href="#new-drop">New Drop</a><a href="#best">Best Sellers</a>
-      <a href="#shop" data-cat-link="Shirts">Shirts</a><a href="#shop" data-cat-link="T-Shirts">T-Shirts</a>
-      <a href="#shop" data-cat-link="Denims">Denims</a><a href="#shop" data-cat-link="Linen Pants">Linen Pants</a>
+      <span id="footCatLinks"><a href="#shop" data-cat-link="Shirts">Shirts</a><a href="#shop" data-cat-link="T-Shirts">T-Shirts</a>
+      <a href="#shop" data-cat-link="Denims">Denims</a><a href="#shop" data-cat-link="Linen Pants">Linen Pants</a></span>
     </div>
     <div>
       <h4>Help</h4>
@@ -628,10 +628,10 @@ var PRODUCTS = [
  {id:11, name:"Sand Linen Pants", cat:"Linen Pants", price:649, mrp:1299, img:"assets/img-15-a24b07baaaf3.jpg", alt:"Sand coloured linen pants set", sizes:["30","32","34"], outSizes:[], stock:1, isNew:false, desc:"Sand-toned linen pants with an easy drape. Just one piece left in this find."}
 ];
 var CATS = [
- {name:"Shirts", img:"assets/img-5-8cc2a4fb26cd.jpg", alt:"Checkered shirt on a hanger"},
- {name:"T-Shirts", img:"assets/img-8-d679525a9431.jpg", alt:"Oversized t-shirt on a model"},
- {name:"Denims", img:"assets/img-11-2aaf59b9092a.jpg", alt:"Blue denim jeans"},
- {name:"Linen Pants", img:"assets/img-14-e6aeca477c55.jpg", alt:"Linen pants"}
+ {name:"Shirts", img:"assets/img-5-8cc2a4fb26cd.jpg", alt:"Checkered shirt on a hanger", waist:false},
+ {name:"T-Shirts", img:"assets/img-8-d679525a9431.jpg", alt:"Oversized t-shirt on a model", waist:false},
+ {name:"Denims", img:"assets/img-11-2aaf59b9092a.jpg", alt:"Blue denim jeans", waist:true},
+ {name:"Linen Pants", img:"assets/img-14-e6aeca477c55.jpg", alt:"Linen pants", waist:true}
 ];
 function byId(id){ return document.getElementById(id); }
 function money(n){ return "₹" + n.toLocaleString("en-IN"); }
@@ -656,7 +656,10 @@ function cardHTML(p, extraClass){
   var sold = p.stock===0;
   var badge = sold ? "" : (p.isNew ? '<span class="badge sale">New</span>' : (p.stock<=2 ? '<span class="badge low">Only '+p.stock+' left</span>' : '<span class="badge">-'+offPct(p)+'%</span>'));
   var veil = sold ? '<div class="soldout-veil"><span>Sold Out</span></div>' : '';
-  var sizes = p.cat==="Denims"||p.cat==="Linen Pants" ? "Waist " + p.sizes.join(" · ") : "Size " + p.sizes.join(" · ");
+  var catObj = null;
+  for(var i=0;i<CATS.length;i++) if(CATS[i].name===p.cat) catObj = CATS[i];
+  var isWaist = catObj ? !!catObj.waist : (p.cat==="Denims"||p.cat==="Linen Pants");
+  var sizes = isWaist ? "Waist " + p.sizes.join(" · ") : "Size " + p.sizes.join(" · ");
   return '<article class="card '+(extraClass||"")+'">' +
     '<div class="card-media">' + badge + veil +
       '<img src="'+p.img+'" alt="'+p.alt+'" loading="lazy" />' +
@@ -671,15 +674,40 @@ function cardHTML(p, extraClass){
 /* ---------- new drop rail ---------- */
 byId("newRail").innerHTML = PRODUCTS.filter(function(p){return p.isNew}).concat(PRODUCTS.filter(function(p){return !p.isNew && p.stock>0}).slice(0,2)).map(function(p){return cardHTML(p)}).join("");
 
-/* ---------- category tiles ---------- */
-byId("catTiles").innerHTML = CATS.map(function(c){
-  var n = PRODUCTS.filter(function(p){return p.cat===c.name}).length;
-  return '<button class="tile" data-cat-link="'+c.name+'"><img src="'+c.img+'" alt="'+c.alt+'" loading="lazy" /><small>'+n+' pieces</small><span>'+c.name+'</span></button>';
-}).join("");
+/* ---------- categories (owner-editable from the dashboard) ----------
+   CATS starts as the built-in four, then Firestore replaces it when the
+   dashboard has saved categories. Every place that lists categories —
+   tiles, Best Sellers tabs, the filter, the menu and footer links — is
+   rebuilt from CATS by renderCategoryUI(), so adding a category in the
+   dashboard shows it everywhere on the site. */
+function renderCatTiles(){
+  byId("catTiles").innerHTML = CATS.map(function(c){
+    var n = PRODUCTS.filter(function(p){return p.cat===c.name}).length;
+    return '<button class="tile" data-cat-link="'+c.name+'"><img src="'+c.img+'" alt="'+c.alt+'" loading="lazy" /><small>'+n+' pieces</small><span>'+c.name+'</span></button>';
+  }).join("");
+}
+function renderBestTabs(){
+  var active = (typeof currentBest === "undefined" || !currentBest) ? "All" : currentBest;
+  var cats = ["All"].concat(CATS.map(function(c){ return c.name; }));
+  byId("bestTabs").innerHTML = cats.map(function(c){ return '<button class="tab'+(c===active?" on":"")+'" data-best="'+c+'">'+c+'</button>'; }).join("");
+}
+function renderCatFilter(){
+  var sel = byId("fCat");
+  var cur = sel.value || "All";
+  sel.innerHTML = '<option value="All">All categories</option>' + CATS.map(function(c){ return '<option>'+c.name+'</option>'; }).join("");
+  sel.value = CATS.some(function(c){ return c.name===cur; }) ? cur : "All";
+}
+function renderCatLinks(){
+  var html = CATS.map(function(c){ return '<a href="#shop" data-cat-link="'+c.name+'">'+c.name+'</a>'; }).join("");
+  var d = byId("drawerCatLinks"); if(d) d.innerHTML = html;
+  var f = byId("footCatLinks"); if(f) f.innerHTML = html;
+  var bannerBtn = document.querySelector(".banner [data-cat-link]");
+  if(bannerBtn) bannerBtn.style.display = CATS.some(function(c){ return c.name==="Linen Pants"; }) ? "" : "none";
+}
+function renderCategoryUI(){ renderCatTiles(); renderBestTabs(); renderCatFilter(); renderCatLinks(); }
+renderCategoryUI();
 
-/* ---------- best sellers tabs ---------- */
-var bestCats = ["All","Shirts","T-Shirts","Denims","Linen Pants"];
-byId("bestTabs").innerHTML = bestCats.map(function(c,i){ return '<button class="tab'+(i===0?" on":"")+'" data-best="'+c+'">'+c+'</button>'; }).join("");
+/* ---------- best sellers tabs (built by renderBestTabs above) ---------- */
 function renderBest(cat){
   var list = PRODUCTS.filter(function(p){ return (cat==="All"||p.cat===cat) && p.stock>0; }).slice(0,4);
   if(list.length<4){ list = list.concat(PRODUCTS.filter(function(p){ return p.stock===0 && (cat==="All"||p.cat===cat); })).slice(0,4); }
@@ -800,11 +828,12 @@ function setCategory(cat){
   byId("fCat").value = cat;
   renderCatalog();
 }
-document.querySelectorAll("[data-cat-link]").forEach(function(el){
-  el.addEventListener("click", function(){
-    setCategory(el.getAttribute("data-cat-link"));
-    closeAll();
-  });
+/* Category links are rebuilt from CATS by renderCatLinks(), so a tap on a
+   tile, menu link or footer link always works — even for a category the
+   owner added after this page was first written. */
+document.addEventListener("click", function(e){
+  var el = e.target.closest("[data-cat-link]");
+  if(el){ setCategory(el.getAttribute("data-cat-link")); closeAll(); }
 });
 byId("bestTabs").addEventListener("click", function(e){
   var b = e.target.closest("[data-best]"); if(!b) return;
@@ -972,10 +1001,7 @@ function splitList(v){
 }
 function rerenderAll(){
   byId("newRail").innerHTML = PRODUCTS.filter(function(p){return p.isNew}).concat(PRODUCTS.filter(function(p){return !p.isNew && p.stock>0}).slice(0,2)).map(function(p){return cardHTML(p)}).join("");
-  byId("catTiles").innerHTML = CATS.map(function(c){
-    var n = PRODUCTS.filter(function(p){return p.cat===c.name}).length;
-    return '<button class="tile" data-cat-link="'+c.name+'"><img src="'+c.img+'" alt="'+c.alt+'" loading="lazy" /><small>'+n+' pieces</small><span>'+c.name+'</span></button>';
-  }).join("");
+  renderCatTiles();
   hotList = PRODUCTS.filter(function(p){return p.stock>=1 && p.stock<=2});
   renderBest(currentBest);
   renderCatalog();
@@ -1056,9 +1082,38 @@ function firestoreProducts(){
     }catch(e){ resolve(null); }
   });
 }
-firestoreProducts().then(function(list){
-  if(list){ PRODUCTS = list; rerenderAll(); }
-  else { loadSheetCatalog(); }
+function firestoreCategories(){
+  return new Promise(function(resolve){
+    if(typeof firebase === "undefined"){ resolve(null); return; }
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      var db = firebase.firestore();
+      var timer = setTimeout(function(){ resolve(null); }, 5000);
+      db.collection("categories").orderBy("order").get().then(function(snap){
+        clearTimeout(timer);
+        if(snap.empty){ resolve(null); return; }
+        var list = [];
+        snap.forEach(function(doc){
+          var d = doc.data();
+          list.push({
+            name: d.name || "", docId: doc.id,
+            img: sheetImg(d.img) || "assets/img-5-8cc2a4fb26cd.jpg",
+            alt: d.alt || d.name || "",
+            waist: !!d.waist
+          });
+        });
+        resolve(list.length ? list : null);
+      }).catch(function(){ clearTimeout(timer); resolve(null); });
+    }catch(e){ resolve(null); }
+  });
+}
+firestoreCategories().then(function(cats){
+  if(cats){ CATS = cats; renderCategoryUI(); rerenderAll(); }
+  firestoreProducts().then(function(list){
+    if(list){ PRODUCTS = list; rerenderAll(); }
+    else { loadSheetCatalog(); }
+    renderCategoryUI();
+  });
 });
 
 syncCounts();
