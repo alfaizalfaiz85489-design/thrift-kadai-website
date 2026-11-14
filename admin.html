@@ -918,7 +918,7 @@ function orderCardHTML(o){
     '<span class="order-status st-' + escHtml(o.status||"new") + '">' + escHtml(orderLabel(o.status)) + '</span></div>' +
     '<div class="order-date">' + escHtml(orderDate(o)) + '</div>' +
     '<div class="order-cust">' + escHtml(c.name||"") + ' · <a href="tel:+91' + escHtml(c.phone||"") + '">+91 ' + escHtml(c.phone||"") + '</a></div>' +
-    '<div class="order-addr">' + escHtml(c.address||"") + ', ' + escHtml(c.city||"") + ', ' + escHtml(c.state||"") + ' — ' + escHtml(c.pincode||"") + '</div>' +
+    '<div class="order-addr">' + escHtml(c.address||"") + ', ' + escHtml(c.city||"") + ', ' + escHtml(c.state || o.state || "") + ' — ' + escHtml(c.pincode||"") + '</div>' +
     '<div class="order-items">' + items + '</div>' +
     '<div class="order-totals">Items: ' + money(o.itemsTotal||0) + '<br/>Shipping (' + escHtml(o.state==="Tamil Nadu"?"within Tamil Nadu":"outside Tamil Nadu") + '): ' + money(o.shipping||0) + '<br/><strong>Total to pay: ' + money(o.total||0) + '</strong></div>' +
     '<div class="order-actions"><label>Status <select data-order-status="' + o.docId + '">' + opts + '</select></label>' +
@@ -958,9 +958,11 @@ byId("ordersList").addEventListener("change", function(e){
   if(!sel) return;
   var docId = sel.getAttribute("data-order-status");
   var val = sel.value;
+  /* Optimistic: show the new status at once, then save it. If the save
+     fails, reload the list so the shown status is the true one. */
+  for(var i=0;i<adminOrders.length;i++) if(adminOrders[i].docId===docId) adminOrders[i].status = val;
+  renderOrders();
   db.collection("orders").doc(docId).update({status: val}).then(function(){
-    for(var i=0;i<adminOrders.length;i++) if(adminOrders[i].docId===docId) adminOrders[i].status = val;
-    renderOrders();
     toast("Order marked " + orderLabel(val) + ".");
   }).catch(function(){ toast("Could not update the status. Check your internet and try again."); loadAdminOrders(); });
 });
