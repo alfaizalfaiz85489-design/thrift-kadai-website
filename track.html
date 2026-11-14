@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Track your order — Thrift Kadai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#ffffff;--surface:#f5f2ec;--ink:#111110;--muted:#5d5a52;--line:#e3ded2;--accent:#c2410c;--black:#0b0b0b}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Manrope",system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.top{background:var(--black);color:#f5f2ec}
+.top-in{max-width:860px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;gap:12px}
+.top-in img{width:44px;height:44px;border-radius:50%;object-fit:cover}
+.top-in .name{font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.04em;line-height:1}
+.top-in .tag{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#a9a49a;font-weight:800}
+.wrap{max-width:860px;margin:0 auto;padding:28px 20px 60px}
+h1{font-family:"Bebas Neue",sans-serif;font-weight:400;font-size:clamp(38px,6vw,54px);line-height:1;margin:0 0 6px;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:15px;line-height:1.6;margin:0 0 22px}
+.track-form{display:flex;gap:10px;flex-wrap:wrap}
+.track-form input{flex:1;min-width:200px;font:inherit;font-weight:700;font-size:16px;letter-spacing:.08em;text-transform:uppercase;padding:14px 16px;border:1.5px solid var(--ink);border-radius:12px;background:var(--bg);color:var(--ink)}
+.track-form input::placeholder{letter-spacing:.04em;text-transform:none;font-weight:600;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:9px;border:0;text-decoration:none;font-weight:800;font-size:14px;letter-spacing:.04em;padding:14px 24px;border-radius:999px;cursor:pointer}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-dark{background:var(--ink);color:var(--bg)}
+.msg{margin-top:16px;font-size:14.5px;line-height:1.6;color:var(--muted)}
+.msg.err{color:#b91c1c;font-weight:700}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:22px}
+.card h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.card .tid{font-weight:800;font-size:15px}
+.badge{display:inline-block;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border-radius:999px;margin-top:12px}
+.st-new{background:#fef3c7;color:#92400e}
+.st-confirmed{background:#dbeafe;color:#1e40af}
+.st-packed{background:#e0e7ff;color:#3730a3}
+.st-dispatched{background:#ede9fe;color:#5b21b6}
+.st-delivered{background:#dcfce7;color:#166534}
+.st-onhold{background:#ffedd5;color:#9a3412}
+.st-rejected{background:#f1f5f9;color:#475569}
+.steps{display:flex;gap:0;margin:20px 0 6px}
+.step{flex:1;text-align:center;position:relative;font-size:11.5px;font-weight:800;color:var(--muted);padding-top:22px}
+.step::before{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:var(--line);border:2px solid var(--line)}
+.step::after{content:"";position:absolute;top:12px;left:calc(-50% + 10px);right:calc(50% + 10px);height:2px;background:var(--line)}
+.step:first-child::after{display:none}
+.step.done{color:var(--ink)}
+.step.done::before{background:#1c7c43;border-color:#1c7c43}
+.step.done::after{background:#1c7c43}
+.step.now{color:var(--accent)}
+.step.now::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px rgba(194,65,12,.18)}
+.notice{margin-top:16px;padding:14px 16px;border-radius:12px;font-size:14.5px;line-height:1.6;font-weight:600}
+.notice.hold{background:#ffedd5;color:#9a3412}
+.notice.bad{background:#fee2e2;color:#991b1b}
+.items{margin:16px 0 0;font-size:14.5px;line-height:1.8}
+.totals{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:14.5px;line-height:1.8}
+.live{margin-top:14px;font-size:13px;color:var(--muted)}
+.live .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1c7c43;margin-right:6px}
+.back{display:inline-block;margin-top:28px;background:var(--ink);color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:13px 22px;border-radius:999px}
+.foot{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;color:var(--muted);font-size:13.5px;line-height:1.7}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><img src="assets/img-4-3f2bd2b0fb37.jpg" alt="Thrift Kadai logo" /><div><div class="name">THRIFT KADAI</div><div class="tag">Budget Fashion · Madurai</div></div></div></header>
+<main class="wrap">
+<h1>Track your order</h1>
+<p class="sub">Enter the Track ID from your WhatsApp order message. When the shop updates your order, this page updates by itself — no need to refresh.</p>
+<div class="track-form">
+  <input id="trackInput" type="text" placeholder="Your Track ID, e.g. 7X4K2Q9M" autocomplete="off" />
+  <button class="btn btn-accent" id="trackBtn">Track order</button>
+</div>
+<div class="msg" id="trackMsg"></div>
+<div id="trackResult"></div>
+<a class="back" href="index.html">← Back to the shop</a>
+<div class="foot">© 2026 Thrift Kadai · Budget Fashion · Madurai · Operated by Sabarinathan BRK<br/>Questions about your order? WhatsApp us on <a href="https://wa.me/917010711860">+91 70107 11860</a> or email <a href="mailto:thriftkadaimdu@gmail.com">thriftkadaimdu@gmail.com</a>.</div>
+</main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* Customer order tracking. The Track ID is the order's document ID —
+   a short random code from the WhatsApp order message. This page only
+   ever shows the status, items and total — never the customer's name,
+   phone or full address. */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA9EwkERG86Dqhkne2Sd12RWjRile_FFtY",
+  authDomain: "thrift-kadai.firebaseapp.com",
+  projectId: "thrift-kadai",
+  storageBucket: "thrift-kadai.firebasestorage.app",
+  messagingSenderId: "323923656141",
+  appId: "1:323923656141:web:8ea8e784d4ecae06b21884"
+};
+var STEPS = [
+  {key:"new", label:"New"},
+  {key:"confirmed", label:"Confirmed"},
+  {key:"packed", label:"Packed"},
+  {key:"dispatched", label:"Dispatched"},
+  {key:"delivered", label:"Delivered"}
+];
+var STATUS_LABELS = {new:"New", confirmed:"Confirmed", packed:"Packed", dispatched:"Dispatched", delivered:"Delivered", onhold:"On Hold", rejected:"Rejected"};
+var db = null;
+var unsub = null;
+function byId(id){ return document.getElementById(id); }
+function money(n){ return "₹" + Number(n).toLocaleString("en-IN"); }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function normCode(v){ return String(v||"").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function stepIndex(status){
+  for(var i=0;i<STEPS.length;i++) if(STEPS[i].key===status) return i;
+  return -1;
+}
+function renderOrder(docId, d){
+  var st = d.status || "new";
+  var idx = stepIndex(st);
+  var html = '<div class="card"><h2>Order</h2><div class="tid">Track ID · ' + esc(docId) + '</div>' +
+    '<span class="badge st-' + esc(st) + '">' + esc(STATUS_LABELS[st] || "New") + '</span>';
+  if(idx >= 0){
+    html += '<div class="steps">' + STEPS.map(function(s, i){
+      var cls = i < idx ? "done" : (i === idx ? "now" : "");
+      return '<div class="step ' + cls + '">' + s.label + '</div>';
+    }).join("") + '</div>';
+  } else if(st === "onhold"){
+    html += '<div class="notice hold">Your order is on hold. The shop will message you on WhatsApp about it.</div>';
+  } else if(st === "rejected"){
+    html += '<div class="notice bad">This order was cancelled. The shop will message you on WhatsApp.</div>';
+  }
+  var items = (d.items||[]).map(function(it){ return esc(it.name) + " — Size " + esc(it.size) + " · " + money(it.price); }).join("<br/>");
+  html += '<div class="items">' + items + '</div>' +
+    '<div class="totals">Items: ' + money(d.itemsTotal||0) + '<br/>Shipping: ' + money(d.shipping||0) +
+    '<br/><strong>Total to pay: ' + money(d.total||0) + '</strong><br/>Delivering to: ' + esc(d.state||"") + '</div>' +
+    '<div class="live"><span class="dot"></span>Live — this page updates by itself when the shop changes your order status.</div></div>';
+  byId("trackResult").innerHTML = html;
+}
+function lookup(code){
+  code = normCode(code);
+  if(!code){ byId("trackMsg").textContent = "Type your Track ID first."; byId("trackMsg").className = "msg err"; return; }
+  if(unsub){ unsub(); unsub = null; }
+  byId("trackMsg").textContent = "Looking up your order…";
+  byId("trackMsg").className = "msg";
+  byId("trackResult").innerHTML = "";
+  try{
+    if(!db){
+      if(typeof firebase === "undefined"){ byId("trackMsg").textContent = "Could not reach the shop right now. Check your internet and try again."; byId("trackMsg").className = "msg err"; return; }
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+    }
+  }catch(e){
+    byId("trackMsg").textContent = "Could not reach the shop right now. Check your internet and try again.";
+    byId("trackMsg").className = "msg err";
+    return;
+  }
+  /* Live listener: the page updates by itself when the owner changes
+     the status in the dashboard — no refresh needed. */
+  unsub = db.collection("orders").doc(code).onSnapshot(function(snap){
+    if(!snap.exists){
+      byId("trackMsg").textContent = "No order found with this Track ID. Check the code and try again.";
+      byId("trackMsg").className = "msg err";
+      byId("trackResult").innerHTML = "";
+      return;
+    }
+    byId("trackMsg").textContent = "";
+    renderOrder(code, snap.data());
+  }, function(){
+    byId("trackMsg").textContent = "Could not reach the shop right now. Check your internet and try again.";
+    byId("trackMsg").className = "msg err";
+  });
+}
+byId("trackBtn").addEventListener("click", function(){ lookup(byId("trackInput").value); });
+byId("trackInput").addEventListener("keydown", function(e){ if(e.key === "Enter") lookup(byId("trackInput").value); });
+(function(){
+  var m = window.location.search.match(/[?&]id=([^&]+)/);
+  if(m){
+    var code = decodeURIComponent(m[1]);
+    byId("trackInput").value = normCode(code);
+    lookup(code);
+  }
+})();
+</script>
+</body>
+</html>

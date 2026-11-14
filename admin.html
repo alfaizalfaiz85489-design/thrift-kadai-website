@@ -914,7 +914,7 @@ function orderCardHTML(o){
   var items = (o.items||[]).map(function(it){ return escHtml(it.name) + " — Size " + escHtml(it.size) + " · " + money(it.price); }).join("<br/>");
   var opts = ORDER_STATUSES.map(function(s){ return '<option value="'+s.key+'"'+(o.status===s.key?" selected":"")+'>'+s.label+'</option>'; }).join("");
   return '<article class="order-card">' +
-    '<div class="order-top"><span class="order-id">Order · ' + escHtml(String(o.docId||"").slice(0,6).toUpperCase()) + '</span>' +
+    '<div class="order-top"><span class="order-id">Track ID · ' + escHtml(String(o.docId||"").toUpperCase()) + '</span>' +
     '<span class="order-status st-' + escHtml(o.status||"new") + '">' + escHtml(orderLabel(o.status)) + '</span></div>' +
     '<div class="order-date">' + escHtml(orderDate(o)) + '</div>' +
     '<div class="order-cust">' + escHtml(c.name||"") + ' · <a href="tel:+91' + escHtml(c.phone||"") + '">+91 ' + escHtml(c.phone||"") + '</a></div>' +

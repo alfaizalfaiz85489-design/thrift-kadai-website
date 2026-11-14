@@ -536,7 +536,7 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
     </div>
     <div>
       <h4>Customer Support</h4>
-      <a href="#visit">Contact Us</a><a href="#policies">Shipping &amp; Delivery</a><a href="#policies">Cancellation &amp; Refund</a><a href="https://wa.me/917010711860?text=Hi%20Thrift%20Kadai!%20I%20want%20to%20track%20my%20order." target="_blank" rel="noopener">Track Order</a>
+      <a href="#visit">Contact Us</a><a href="#policies">Shipping &amp; Delivery</a><a href="#policies">Cancellation &amp; Refund</a><a href="track.html">Track Order</a>
     </div>
     <div>
       <h4>Legal</h4>
@@ -1054,6 +1054,15 @@ byId("addrState").addEventListener("change", renderAddrTotals);
 byId("addrClose").addEventListener("click", function(){ byId("addrModal").classList.remove("open"); });
 byId("addrBack").addEventListener("click", function(){ byId("addrModal").classList.remove("open"); });
 byId("addrModal").addEventListener("click", function(e){ if(e.target===this) this.classList.remove("open"); });
+/* Track ID: a short random code the customer uses on track.html to see
+   their order status. It is the order's document ID, so the track page
+   can fetch that one order directly. */
+function makeTrackId(){
+  var chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  var t = "";
+  for(var i=0;i<8;i++) t += chars[Math.floor(Math.random()*chars.length)];
+  return t;
+}
 byId("addrConfirm").addEventListener("click", function(){
   var name = byId("addrName").value.trim();
   var ph = byId("addrPhone").value.replace(/\D/g, "");
@@ -1068,6 +1077,8 @@ byId("addrConfirm").addEventListener("click", function(){
   if(!city){ toast("Please enter your city"); return; }
   if(!/^\d{6}$/.test(pin)){ toast("Please enter a valid 6-digit pincode"); return; }
   var items = addrItemsTotal(), ship = shipFor(st);
+  var trackId = null;
+  try{ if(typeof firebase !== "undefined") trackId = makeTrackId(); }catch(e){ trackId = null; }
   var lines = ["Hi Thrift Kadai! I want to order:"];
   addrOrder.forEach(function(c){ var p = prod(c.id); lines.push("• " + p.name + " — Size " + c.size + " — " + money(p.price)); });
   lines.push("Items total: " + money(items));
@@ -1077,14 +1088,18 @@ byId("addrConfirm").addEventListener("click", function(){
   lines.push(name);
   lines.push(line + ", " + city + ", " + st + " — " + pin);
   lines.push("Phone: " + ph);
+  if(trackId){
+    lines.push("Track ID: " + trackId);
+    lines.push("Track your order: https://alfaizalfaiz85489-design.github.io/thrift-kadai-website/track.html?id=" + trackId);
+  }
   lines.push("Please confirm availability and share your UPI ID / QR — I will pay by direct UPI.");
   /* Save the order to Firestore so the owner also sees it in the
      dashboard's Orders list (status starts as "new"). Fire-and-forget:
      WhatsApp opens even if the save fails or Firebase is unreachable. */
   try{
-    if(typeof firebase !== "undefined"){
+    if(typeof firebase !== "undefined" && trackId){
       if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-      firebase.firestore().collection("orders").add({
+      firebase.firestore().collection("orders").doc(trackId).set({
         items: addrOrder.map(function(c){ var p = prod(c.id); return {id: c.id, name: p.name, size: c.size, price: p.price}; }),
         itemsTotal: items, shipping: ship, total: items + ship,
         state: st,
