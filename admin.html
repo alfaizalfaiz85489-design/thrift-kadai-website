@@ -350,6 +350,31 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
 .photo-thumb .pt-x{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:0;font-size:13px;line-height:1;cursor:pointer}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:22px 26px 0}
 .modal-head h3{margin:0;font-size:22px}
+/* ---------- orders ---------- */
+.order-filters{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.order-chip{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:800;cursor:pointer}
+.order-chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.order-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.order-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.order-id{font-weight:800;font-size:13px;color:var(--muted)}
+.order-status{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+.st-new{background:#fef3c7;color:#92400e}
+.st-confirmed{background:#dbeafe;color:#1e40af}
+.st-packed{background:#e0e7ff;color:#3730a3}
+.st-dispatched{background:#ede9fe;color:#5b21b6}
+.st-delivered{background:#dcfce7;color:#166534}
+.st-onhold{background:#ffedd5;color:#9a3412}
+.st-rejected{background:#f1f5f9;color:#475569}
+.order-date{font-size:13px;color:var(--muted);margin-top:6px}
+.order-cust{font-weight:800;margin-top:10px}
+.order-cust a{color:var(--accent)}
+.order-addr{color:var(--muted);font-size:14px;line-height:1.6;margin-top:2px}
+.order-items{margin:10px 0;font-size:14px;line-height:1.7}
+.order-totals{font-size:14px;line-height:1.7;border-top:1px solid var(--line);padding-top:10px}
+.order-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.order-actions label{font-size:13px;font-weight:800;color:var(--muted);display:flex;align-items:center;gap:8px}
+.order-actions select{font:inherit;font-weight:700;padding:9px 12px;border-radius:999px;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink)}
+.order-actions .btn{padding:10px 16px;font-size:13px}
 </style>
 </head>
 <body>
@@ -382,6 +407,15 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
   <!-- DASHBOARD -->
   <div id="dashView" hidden>
     <div class="dash-head">
+      <div><h2>Orders</h2><p>New orders from the website land here and on your WhatsApp. Change the status as you pack and send each order — like the Meesho dashboard.</p></div>
+      <div class="dash-actions">
+        <button class="btn btn-outline" id="refreshOrdersBtn">Refresh</button>
+      </div>
+    </div>
+    <div class="order-filters" id="orderFilters"></div>
+    <div id="ordersList"></div>
+    <div class="empty-box" id="ordersEmpty" hidden>No orders yet. When a customer places an order, it will show here.</div>
+    <div class="dash-head" style="margin-top:34px">
       <div><h2>Your products</h2><p>Same pieces as the website. Tap Edit to change anything, Remove to take a piece off the website. Changes show on the website right away.</p></div>
       <div class="dash-actions">
         <button class="btn btn-accent" id="addBtn">+ Add product</button>
@@ -568,7 +602,7 @@ function driveImg(v){
 function showLogin(){ byId("loginView").hidden = false; byId("dashView").hidden = true; }
 function showDash(){ byId("loginView").hidden = true; byId("dashView").hidden = false; }
 auth.onAuthStateChanged(function(u){
-  if(u){ showDash(); loadAdminProducts(); loadAdminCats(); }
+  if(u){ showDash(); loadAdminOrders(); loadAdminProducts(); loadAdminCats(); }
   else { showLogin(); }
 });
 function doLogin(){
@@ -851,6 +885,102 @@ byId("adminGrid").addEventListener("click", function(e){
       toast("Removed — it is gone from the website.");
     }).catch(function(){ toast("Could not remove. Check your internet and try again."); });
   }
+});
+
+/* ---------- orders (from the website's delivery form) ----------
+   Every order a customer confirms is saved to Firestore by index.html
+   (status "new") and WhatsApp opens as before. Here the owner sees all
+   orders, filters by status and changes it — New, Confirmed, Packed,
+   Dispatched, Delivered, On Hold, Rejected — like the Meesho seller
+   dashboard. */
+var ORDER_STATUSES = [
+  {key:"new", label:"New"},
+  {key:"confirmed", label:"Confirmed"},
+  {key:"packed", label:"Packed"},
+  {key:"dispatched", label:"Dispatched"},
+  {key:"delivered", label:"Delivered"},
+  {key:"onhold", label:"On Hold"},
+  {key:"rejected", label:"Rejected"}
+];
+var adminOrders = [];
+var orderFilter = "all";
+function orderLabel(key){ for(var i=0;i<ORDER_STATUSES.length;i++) if(ORDER_STATUSES[i].key===key) return ORDER_STATUSES[i].label; return "New"; }
+function escHtml(v){ return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function orderDate(o){
+  try{ var d = o.createdAt && o.createdAt.toDate ? o.createdAt.toDate() : null; if(!d) return ""; return d.toLocaleString("en-IN", {day:"numeric", month:"short", year:"numeric", hour:"numeric", minute:"2-digit"}); }catch(e){ return ""; }
+}
+function orderCardHTML(o){
+  var c = o.customer || {};
+  var items = (o.items||[]).map(function(it){ return escHtml(it.name) + " — Size " + escHtml(it.size) + " · " + money(it.price); }).join("<br/>");
+  var opts = ORDER_STATUSES.map(function(s){ return '<option value="'+s.key+'"'+(o.status===s.key?" selected":"")+'>'+s.label+'</option>'; }).join("");
+  return '<article class="order-card">' +
+    '<div class="order-top"><span class="order-id">Order · ' + escHtml(String(o.docId||"").slice(0,6).toUpperCase()) + '</span>' +
+    '<span class="order-status st-' + escHtml(o.status||"new") + '">' + escHtml(orderLabel(o.status)) + '</span></div>' +
+    '<div class="order-date">' + escHtml(orderDate(o)) + '</div>' +
+    '<div class="order-cust">' + escHtml(c.name||"") + ' · <a href="tel:+91' + escHtml(c.phone||"") + '">+91 ' + escHtml(c.phone||"") + '</a></div>' +
+    '<div class="order-addr">' + escHtml(c.address||"") + ', ' + escHtml(c.city||"") + ', ' + escHtml(c.state||"") + ' — ' + escHtml(c.pincode||"") + '</div>' +
+    '<div class="order-items">' + items + '</div>' +
+    '<div class="order-totals">Items: ' + money(o.itemsTotal||0) + '<br/>Shipping (' + escHtml(o.state==="Tamil Nadu"?"within Tamil Nadu":"outside Tamil Nadu") + '): ' + money(o.shipping||0) + '<br/><strong>Total to pay: ' + money(o.total||0) + '</strong></div>' +
+    '<div class="order-actions"><label>Status <select data-order-status="' + o.docId + '">' + opts + '</select></label>' +
+    '<a class="btn btn-outline" href="https://wa.me/91' + escHtml(c.phone||"") + '" target="_blank" rel="noopener">WhatsApp customer</a>' +
+    '<button class="btn-remove" data-order-remove="' + o.docId + '">Delete</button></div></article>';
+}
+function renderOrderFilters(){
+  var counts = {all: adminOrders.length};
+  ORDER_STATUSES.forEach(function(s){ counts[s.key] = 0; });
+  adminOrders.forEach(function(o){ var k = o.status||"new"; if(counts[k]==null) counts[k]=0; counts[k]++; });
+  var html = '<button class="order-chip'+(orderFilter==="all"?" on":"")+'" data-order-filter="all">All ('+counts.all+')</button>';
+  ORDER_STATUSES.forEach(function(s){ html += '<button class="order-chip'+(orderFilter===s.key?" on":"")+'" data-order-filter="'+s.key+'">'+s.label+' ('+(counts[s.key]||0)+')</button>'; });
+  byId("orderFilters").innerHTML = html;
+}
+function renderOrders(){
+  renderOrderFilters();
+  var list = adminOrders.filter(function(o){ return orderFilter==="all" || (o.status||"new")===orderFilter; });
+  byId("ordersList").innerHTML = list.map(orderCardHTML).join("");
+  byId("ordersEmpty").hidden = adminOrders.length > 0;
+}
+function loadAdminOrders(){
+  db.collection("orders").orderBy("createdAt","desc").get().then(function(snap){
+    adminOrders = [];
+    snap.forEach(function(doc){ var d = doc.data(); d.docId = doc.id; adminOrders.push(d); });
+    renderOrders();
+  }).catch(function(){ toast("Could not load orders — check your internet and try again."); });
+}
+byId("refreshOrdersBtn").addEventListener("click", function(){ loadAdminOrders(); toast("Orders refreshed"); });
+byId("orderFilters").addEventListener("click", function(e){
+  var chip = e.target.closest("[data-order-filter]");
+  if(!chip) return;
+  orderFilter = chip.getAttribute("data-order-filter");
+  renderOrders();
+});
+byId("ordersList").addEventListener("change", function(e){
+  var sel = e.target.closest("[data-order-status]");
+  if(!sel) return;
+  var docId = sel.getAttribute("data-order-status");
+  var val = sel.value;
+  db.collection("orders").doc(docId).update({status: val}).then(function(){
+    for(var i=0;i<adminOrders.length;i++) if(adminOrders[i].docId===docId) adminOrders[i].status = val;
+    renderOrders();
+    toast("Order marked " + orderLabel(val) + ".");
+  }).catch(function(){ toast("Could not update the status. Check your internet and try again."); loadAdminOrders(); });
+});
+byId("ordersList").addEventListener("click", function(e){
+  var rm = e.target.closest("[data-order-remove]");
+  if(!rm) return;
+  var docId = rm.getAttribute("data-order-remove");
+  /* Two-tap delete, same as Remove on products. */
+  if(rm.getAttribute("data-armed") !== "1"){
+    rm.setAttribute("data-armed", "1");
+    rm.textContent = "Tap again to delete";
+    setTimeout(function(){ if(rm.isConnected){ rm.removeAttribute("data-armed"); rm.textContent = "Delete"; } }, 4000);
+    return;
+  }
+  rm.removeAttribute("data-armed");
+  rm.textContent = "Deleting…";
+  db.collection("orders").doc(docId).delete().then(function(){
+    loadAdminOrders();
+    toast("Order deleted.");
+  }).catch(function(){ toast("Could not delete. Check your internet and try again."); });
 });
 
 /* ---------- categories (the "Shop by category" boxes) ---------- */

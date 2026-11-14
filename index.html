@@ -1078,6 +1078,22 @@ byId("addrConfirm").addEventListener("click", function(){
   lines.push(line + ", " + city + ", " + st + " — " + pin);
   lines.push("Phone: " + ph);
   lines.push("Please confirm availability and share your UPI ID / QR — I will pay by direct UPI.");
+  /* Save the order to Firestore so the owner also sees it in the
+     dashboard's Orders list (status starts as "new"). Fire-and-forget:
+     WhatsApp opens even if the save fails or Firebase is unreachable. */
+  try{
+    if(typeof firebase !== "undefined"){
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      firebase.firestore().collection("orders").add({
+        items: addrOrder.map(function(c){ var p = prod(c.id); return {id: c.id, name: p.name, size: c.size, price: p.price}; }),
+        itemsTotal: items, shipping: ship, total: items + ship,
+        state: st,
+        customer: {name: name, phone: ph, address: line, city: city, pincode: pin},
+        status: "new",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function(){});
+    }
+  }catch(e){}
   byId("addrModal").classList.remove("open");
   window.open("https://wa.me/" + WA + "?text=" + encodeURIComponent(lines.join("\n")), "_blank");
 });
