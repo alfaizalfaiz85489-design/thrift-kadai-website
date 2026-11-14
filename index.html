@@ -233,8 +233,7 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
 .cart-item img{width:64px;height:80px;object-fit:cover;border-radius:8px}
 .cart-item .ci-name{font-weight:700;font-size:14px;line-height:1.3}
 .cart-item .ci-meta{font-size:12.5px;color:var(--muted);margin-top:2px}
-.qty{display:inline-flex;align-items:center;gap:2px;border:1.5px solid var(--line);border-radius:8px;margin-top:8px}
-.qty button{width:28px;height:28px;border:0;background:none;font-weight:800;color:var(--ink)}
+
 .ci-right{margin-left:auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end}
 .ci-remove{background:none;border:0;color:var(--accent);font-size:12px;font-weight:800;margin-top:auto;padding:0}
 .cart-foot{border-top:1px solid var(--line);padding:18px 20px}
@@ -267,6 +266,14 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
 .lbl{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:18px}
 .delivery-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.6;margin-top:8px}
 .low-note{color:var(--accent);font-weight:800;font-size:13.5px;margin-top:10px}
+.policy-note{border:1.5px dashed var(--accent);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;line-height:1.55;margin-top:14px;color:var(--ink)}
+.addr-input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;background:var(--bg);color:var(--ink);margin-top:8px;font-family:inherit;box-sizing:border-box}
+.addr-input:focus{outline:none;border-color:var(--ink)}
+.addr-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.addr-summary{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.7;margin-top:14px}
+.addr-totals{margin-top:14px;border-top:1.5px solid var(--line);padding-top:10px;font-size:14.5px;line-height:2}
+.addr-totals .t-row{display:flex;justify-content:space-between;gap:10px}
+.addr-totals .t-total{font-weight:800;font-size:17px}
 .also{padding:0 26px 26px}
 .also h4{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:4px 0 12px}
 .also-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -552,8 +559,9 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
   <div class="cart-items" id="cartItems"></div>
   <div class="cart-foot">
     <div class="subtotal"><span>Subtotal</span><span id="cartTotal">₹0</span></div>
-    <p class="ship-note">Place your order on WhatsApp — we confirm your pieces and size, then share our UPI ID / QR so you can pay by direct UPI. Delivery is calculated on confirmation.</p>
-    <button class="btn btn-accent" id="checkoutBtn">Place order on WhatsApp</button>
+    <p class="ship-note">Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — added at checkout. We confirm your pieces on WhatsApp, then share our UPI ID / QR so you can pay by direct UPI.</p>
+    <div class="policy-note">No exchange · No return · No refund — please check the size, price and all details carefully before you order.</div>
+    <button class="btn btn-accent" id="checkoutBtn">Continue to delivery details</button>
     <button class="btn btn-outline" id="continueBtn">Continue shopping</button>
     <!-- PAYMENT SLOT: Direct UPI for now (owner has no Razorpay account).
          RAZORPAY SLOT: if the owner opens a Razorpay account later, load
@@ -585,12 +593,12 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
         <div class="low-note" id="qvLow"></div>
         <div class="lbl">Select size</div>
         <div class="size-row" id="qvSizes"></div>
-        <div class="lbl">Quantity</div>
-        <div class="qty" style="margin-top:8px"><button id="qvMinus" aria-label="Less">−</button><span id="qvQty" style="min-width:28px;text-align:center;font-weight:800">1</span><button id="qvPlus" aria-label="More">+</button></div>
+
         <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap">
           <button class="btn btn-dark" id="qvAdd" style="flex:1;justify-content:center">Add to cart</button>
           <button class="btn btn-accent" id="qvBuy" style="flex:1;justify-content:center">Buy it now</button>
         </div>
+        <div class="policy-note">No exchange · No return · No refund — please check the size, price and all details carefully before you order.</div>
         <div class="lbl">Delivery estimate</div>
         <div class="delivery-box" id="qvDelivery"></div>
         <div class="lbl">About this piece</div>
@@ -598,6 +606,36 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
       </div>
     </div>
     <div class="also"><h4>You might also like</h4><div class="also-row" id="qvAlso"></div></div>
+  </div>
+</div>
+
+<!-- ADDRESS + SHIPPING -->
+<div class="modal" id="addrModal" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:560px">
+    <button class="x-btn" id="addrClose" aria-label="Close">✕</button>
+    <div class="modal-body">
+      <h3 style="margin-top:0">Delivery details</h3>
+      <p style="color:var(--muted);font-size:14px;margin:6px 0 0">Fill your address below. Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — it is added to your total.</p>
+      <div id="addrSummary" class="addr-summary"></div>
+      <div class="lbl">Your name</div>
+      <input class="addr-input" id="addrName" type="text" placeholder="Full name" autocomplete="name" />
+      <div class="lbl">Phone (WhatsApp)</div>
+      <input class="addr-input" id="addrPhone" type="tel" placeholder="10-digit mobile number" autocomplete="tel" inputmode="numeric" />
+      <div class="lbl">Full address</div>
+      <textarea class="addr-input" id="addrLine" rows="2" placeholder="House no., street, area"></textarea>
+      <div class="lbl">City</div>
+      <input class="addr-input" id="addrCity" type="text" placeholder="City" autocomplete="address-level2" />
+      <div class="addr-row">
+        <div><div class="lbl">State</div><select class="addr-input" id="addrState"></select></div>
+        <div><div class="lbl">Pincode</div><input class="addr-input" id="addrPin" type="text" placeholder="6-digit pincode" inputmode="numeric" /></div>
+      </div>
+      <div class="addr-totals" id="addrTotals"></div>
+      <div class="policy-note">No exchange · No return · No refund — please check the size, price, address and all details carefully before you confirm.</div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn btn-dark" id="addrBack" style="flex:1;justify-content:center">Back</button>
+        <button class="btn btn-accent" id="addrConfirm" style="flex:2;justify-content:center">Confirm order on WhatsApp</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -774,6 +812,7 @@ function closeAll(){
   byId("cartDrawer").classList.remove("open");
   byId("scrim").classList.remove("on");
   byId("qvModal").classList.remove("open");
+  byId("addrModal").classList.remove("open");
 }
 byId("menuBtn").addEventListener("click", openDrawer);
 byId("drawerClose").addEventListener("click", closeAll);
@@ -868,7 +907,7 @@ function renderCart(){
     box.innerHTML = cart.map(function(c, i){
       var p = prod(c.id);
       return '<div class="cart-item"><img src="'+mainImg(p)+'" alt="'+p.alt+'" /><div><div class="ci-name">'+p.name+'</div><div class="ci-meta">Size '+c.size+' · '+money(p.price)+'</div>' +
-      '<span class="qty"><button data-dec="'+i+'" aria-label="Less">−</button><span style="min-width:24px;text-align:center;font-weight:800">'+c.qty+'</span><button data-inc="'+i+'" aria-label="More">+</button></span></div>' +
+      '</div>' +
       '<div class="ci-right"><strong>'+money(p.price*c.qty)+'</strong><button class="ci-remove" data-rm="'+i+'">Remove</button></div></div>';
     }).join("");
   }
@@ -879,8 +918,8 @@ function renderCart(){
 function addToCart(id, size, qty){
   var p = prod(id);
   if(!size){ openQV(id); toast("Pick a size first"); return; }
-  for(var i=0;i<cart.length;i++){ if(cart[i].id===id && cart[i].size===size){ cart[i].qty += qty; renderCart(); toast(p.name+" added to cart"); return; } }
-  cart.push({id:id, size:size, qty:qty});
+  for(var i=0;i<cart.length;i++){ if(cart[i].id===id && cart[i].size===size){ renderCart(); toast(p.name+" (size "+size+") is already in your cart"); return; } }
+  cart.push({id:id, size:size, qty:1});
   renderCart(); toast(p.name+" (size "+size+") added to cart");
 }
 function openCart(){ renderCart(); byId("cartDrawer").classList.add("open"); byId("scrim").classList.add("on"); }
@@ -889,11 +928,9 @@ byId("stickyCart").addEventListener("click", openCart);
 byId("cartClose").addEventListener("click", closeAll);
 byId("continueBtn").addEventListener("click", closeAll);
 byId("cartItems").addEventListener("click", function(e){
-  var inc=e.target.closest("[data-inc]"), dec=e.target.closest("[data-dec]"), rm=e.target.closest("[data-rm]");
-  if(inc){ cart[+inc.getAttribute("data-inc")].qty++; }
-  else if(dec){ var i=+dec.getAttribute("data-dec"); cart[i].qty--; if(cart[i].qty<1) cart.splice(i,1); }
-  else if(rm){ cart.splice(+rm.getAttribute("data-rm"),1); }
-  else return;
+  var rm=e.target.closest("[data-rm]");
+  if(!rm) return;
+  cart.splice(+rm.getAttribute("data-rm"),1);
   renderCart();
 });
 byId("upiBtn").addEventListener("click", function(){
@@ -911,12 +948,8 @@ function openRazorpayCheckout(totalInPaise){ toast("Online card payment is not l
 
 byId("checkoutBtn").addEventListener("click", function(){
   if(!cart.length){ toast("Your cart is empty"); return; }
-  var lines = ["Hi Thrift Kadai! I want to order:"];
-  var total = 0;
-  cart.forEach(function(c){ var p=prod(c.id); total += p.price*c.qty; lines.push("• "+p.name+" — Size "+c.size+" × "+c.qty+" — "+money(p.price*c.qty)); });
-  lines.push("Total: "+money(total));
-  lines.push("Please confirm availability and share your UPI ID / QR — I will pay by direct UPI.");
-  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(lines.join("\n")), "_blank");
+  closeAll();
+  openAddr(cart.slice());
 });
 
 /* ---------- quick view ---------- */
@@ -942,13 +975,12 @@ function openQV(id){
   byId("qvMrp").textContent = money(p.mrp);
   byId("qvOff").textContent = offPct(p) + "% off";
   byId("qvLow").textContent = p.stock===0 ? "This piece is sold out. Ask us on WhatsApp — we hunt similar styles every week." : (p.stock<=2 ? "Only " + p.stock + " left — thrift pieces don't restock." : "");
-  byId("qvQty").textContent = "1";
   byId("qvSizes").innerHTML = p.sizes.map(function(s){
     var out = p.outSizes.indexOf(s) > -1;
     return '<button class="size-btn'+(out?" out":"")+'" data-size="'+s+'" '+(out?"disabled":"")+'>'+s+'</button>';
   }).join("");
   byId("qvDelivery").innerHTML = deliveryText();
-  byId("qvDesc").textContent = p.desc + " Every Thrift Kadai piece is quality-checked and washed before listing. 3-day exchange on defective or wrong-size pieces, unused with tags on.";
+  byId("qvDesc").textContent = p.desc + " Every Thrift Kadai piece is quality-checked and washed before listing. No exchange, no return, no refund — please check the size, price and all details carefully before you order.";
   byId("qvAdd").textContent = p.stock===0 ? "Sold out" : "Add to cart";
   byId("qvAdd").disabled = p.stock===0;
   byId("qvBuy").textContent = p.stock===0 ? "Ask on WhatsApp" : "Buy it now";
@@ -973,8 +1005,6 @@ byId("qvThumbs").addEventListener("click", function(e){
   byId("qvImg").src = u;
   this.querySelectorAll("img").forEach(function(x){ x.classList.toggle("on", x===t); });
 });
-byId("qvMinus").addEventListener("click", function(){ qv.qty = Math.max(1, qv.qty-1); byId("qvQty").textContent = qv.qty; });
-byId("qvPlus").addEventListener("click", function(){ qv.qty = Math.min(9, qv.qty+1); byId("qvQty").textContent = qv.qty; });
 byId("qvAdd").addEventListener("click", function(){
   if(!qv.size){ toast("Please select a size first"); return; }
   addToCart(qv.id, qv.size, qv.qty);
@@ -985,8 +1015,67 @@ byId("qvBuy").addEventListener("click", function(){
   var p = prod(qv.id);
   if(p.stock===0){ window.open("https://wa.me/"+WA+"?text="+encodeURIComponent("Hi Thrift Kadai! The "+p.name+" is sold out — can you hunt a similar piece for me?"), "_blank"); return; }
   if(!qv.size){ toast("Please select a size first"); return; }
-  var msg = "Hi Thrift Kadai! I want to buy:\n• "+p.name+" — Size "+qv.size+" × "+qv.qty+" — "+money(p.price*qv.qty)+"\nPlease confirm and share your UPI ID / QR so I can pay by direct UPI.";
-  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg), "_blank");
+  closeAll();
+  openAddr([{id:qv.id, size:qv.size, qty:1}]);
+});
+
+/* ---------- address + shipping ---------- */
+var STATES = ["Tamil Nadu","Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
+var addrOrder = [];
+function shipFor(state){ return state === "Tamil Nadu" ? 60 : 120; }
+function addrItemsTotal(){ var t = 0; addrOrder.forEach(function(c){ t += prod(c.id).price * 1; }); return t; }
+function renderAddrTotals(){
+  var st = byId("addrState").value;
+  var ship = shipFor(st);
+  var items = addrItemsTotal();
+  byId("addrTotals").innerHTML =
+    '<div class="t-row"><span>Items total</span><span>'+money(items)+'</span></div>' +
+    '<div class="t-row"><span>Shipping ('+(st === "Tamil Nadu" ? "within Tamil Nadu" : "outside Tamil Nadu")+')</span><span>'+money(ship)+'</span></div>' +
+    '<div class="t-row t-total"><span>Total to pay</span><span>'+money(items + ship)+'</span></div>';
+}
+function openAddr(items){
+  addrOrder = items;
+  if(!byId("addrState").options.length){
+    byId("addrState").innerHTML = STATES.map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join("");
+    byId("addrState").value = "Tamil Nadu";
+  }
+  byId("addrSummary").innerHTML = addrOrder.map(function(c){
+    var p = prod(c.id);
+    return '<div>'+p.name+' — Size '+c.size+' · '+money(p.price)+'</div>';
+  }).join("");
+  renderAddrTotals();
+  byId("addrModal").classList.add("open");
+}
+byId("addrState").addEventListener("change", renderAddrTotals);
+byId("addrClose").addEventListener("click", function(){ byId("addrModal").classList.remove("open"); });
+byId("addrBack").addEventListener("click", function(){ byId("addrModal").classList.remove("open"); });
+byId("addrModal").addEventListener("click", function(e){ if(e.target===this) this.classList.remove("open"); });
+byId("addrConfirm").addEventListener("click", function(){
+  var name = byId("addrName").value.trim();
+  var ph = byId("addrPhone").value.replace(/\D/g, "");
+  if(ph.length === 12 && ph.indexOf("91") === 0) ph = ph.slice(2);
+  var line = byId("addrLine").value.trim();
+  var city = byId("addrCity").value.trim();
+  var st = byId("addrState").value;
+  var pin = byId("addrPin").value.trim();
+  if(!name){ toast("Please enter your name"); return; }
+  if(!/^[6-9]\d{9}$/.test(ph)){ toast("Please enter a valid 10-digit mobile number"); return; }
+  if(!line){ toast("Please enter your full address"); return; }
+  if(!city){ toast("Please enter your city"); return; }
+  if(!/^\d{6}$/.test(pin)){ toast("Please enter a valid 6-digit pincode"); return; }
+  var items = addrItemsTotal(), ship = shipFor(st);
+  var lines = ["Hi Thrift Kadai! I want to order:"];
+  addrOrder.forEach(function(c){ var p = prod(c.id); lines.push("• " + p.name + " — Size " + c.size + " — " + money(p.price)); });
+  lines.push("Items total: " + money(items));
+  lines.push("Shipping (" + (st === "Tamil Nadu" ? "within Tamil Nadu" : "outside Tamil Nadu") + "): " + money(ship));
+  lines.push("Total to pay: " + money(items + ship));
+  lines.push("Deliver to:");
+  lines.push(name);
+  lines.push(line + ", " + city + ", " + st + " — " + pin);
+  lines.push("Phone: " + ph);
+  lines.push("Please confirm availability and share your UPI ID / QR — I will pay by direct UPI.");
+  byId("addrModal").classList.remove("open");
+  window.open("https://wa.me/" + WA + "?text=" + encodeURIComponent(lines.join("\n")), "_blank");
 });
 
 /* ---------- global card actions (event delegation) ---------- */
