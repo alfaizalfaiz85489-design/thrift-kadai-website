@@ -324,6 +324,11 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
   .toast{bottom:140px}
 }
 #qvImg{cursor:grab;touch-action:pan-y}
+.qty{display:inline-flex;align-items:center;gap:2px;border:1.5px solid var(--line);border-radius:10px;padding:2px}
+.qty>button{width:38px;height:38px;border:0;background:none;font-weight:800;font-size:18px;color:var(--ink);cursor:pointer}
+.qty>button:disabled{opacity:.3;cursor:default}
+.qty .qval{font-weight:800;font-size:15px;min-width:26px;text-align:center}
+.qty-note{font-size:13px;color:var(--muted);font-weight:600;margin-left:8px}
 </style>
 </head>
 <body>
@@ -600,6 +605,11 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
         <div class="low-note" id="qvLow"></div>
         <div class="lbl">Select size</div>
         <div class="size-row" id="qvSizes"></div>
+        <div class="lbl" id="qvQtyLbl" style="margin-top:16px" hidden>Quantity</div>
+        <div class="qty" id="qvQtyRow" hidden>
+          <button type="button" id="qvMinus" aria-label="One less">−</button><span class="qval" id="qvQtyVal">1</span><button type="button" id="qvPlus" aria-label="One more">+</button>
+          <span class="qty-note" id="qvQtyNote"></span>
+        </div>
 
         <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap">
           <button class="btn btn-dark" id="qvAdd" style="flex:1;justify-content:center">Add to cart</button>
@@ -692,6 +702,15 @@ function prodImages(p){ return (p && p.images && p.images.length) ? p.images : [
    `images` list, or the old single `img` field for products saved
    before galleries existed. */
 function mainImg(p){ var im = prodImages(p); return (im && im[0]) || "assets/img-5-8cc2a4fb26cd.jpg"; }
+/* How many pieces of one size are available. If the dashboard saved a
+   per-size stock map, use it. Otherwise: a size marked sold out has 0;
+   a product with a single size has its whole stock in that size; a
+   product with several sizes and no map has 1 of each available size. */
+function sizeQty(p, s){
+  if(p.sizeStock && typeof p.sizeStock[s] === "number") return p.sizeStock[s];
+  if((p.outSizes||[]).indexOf(s) >= 0) return 0;
+  return (p.sizes.length === 1) ? (p.stock || 0) : 1;
+}
 function toast(msg){ var t=byId("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("on")},2600); }
 
 /* wishlist + cart (this session only) */
@@ -714,7 +733,7 @@ function cardHTML(p, extraClass){
   var catObj = null;
   for(var i=0;i<CATS.length;i++) if(CATS[i].name===p.cat) catObj = CATS[i];
   var isWaist = catObj ? !!catObj.waist : (p.cat==="Denims"||p.cat==="Linen Pants");
-  var sizes = isWaist ? "Waist " + p.sizes.join(" · ") : "Size " + p.sizes.join(" · ");
+  var sizes = (isWaist ? "Waist " : "Size ") + p.sizes.map(function(s){ return sizeQty(p, s) === 0 ? "<s>"+s+"</s>" : s; }).join(" · ");
   return '<article class="card '+(extraClass||"")+'" data-card="'+p.id+'">' +
     '<div class="card-media">' + badge + veil +
       '<img src="'+mainImg(p)+'" alt="'+p.alt+'" loading="lazy" />' +
@@ -914,7 +933,9 @@ function renderCart(){
   } else {
     box.innerHTML = cart.map(function(c, i){
       var p = prod(c.id);
+      var max = sizeQty(p, c.size);
       return '<div class="cart-item"><img src="'+mainImg(p)+'" alt="'+p.alt+'" /><div><div class="ci-name">'+p.name+'</div><div class="ci-meta">Size '+c.size+' · '+money(p.price)+'</div>' +
+      '<div class="qty" style="margin-top:8px"><button type="button" data-dec="'+i+'"'+(c.qty<=1?" disabled":"")+'>−</button><span class="qval">'+c.qty+'</span><button type="button" data-inc="'+i+'"'+(c.qty>=max?" disabled":"")+'>+</button></div>' +
       '</div>' +
       '<div class="ci-right"><strong>'+money(p.price*c.qty)+'</strong><button class="ci-remove" data-rm="'+i+'">Remove</button></div></div>';
     }).join("");
@@ -927,8 +948,9 @@ function addToCart(id, size, qty){
   var p = prod(id);
   if(!size){ openQV(id); toast("Pick a size first"); return; }
   for(var i=0;i<cart.length;i++){ if(cart[i].id===id && cart[i].size===size){ renderCart(); toast(p.name+" (size "+size+") is already in your cart"); return; } }
-  cart.push({id:id, size:size, qty:1});
-  renderCart(); toast(p.name+" (size "+size+") added to cart");
+  var q = Math.max(1, Math.min(qty||1, sizeQty(p, size)));
+  cart.push({id:id, size:size, qty:q});
+  renderCart(); toast((q>1 ? q+" × " : "")+p.name+" (size "+size+") added to cart");
 }
 function openCart(){ renderCart(); byId("cartDrawer").classList.add("open"); byId("scrim").classList.add("on"); }
 byId("cartBtn").addEventListener("click", openCart);
@@ -937,9 +959,11 @@ byId("cartClose").addEventListener("click", closeAll);
 byId("continueBtn").addEventListener("click", closeAll);
 byId("cartItems").addEventListener("click", function(e){
   var rm=e.target.closest("[data-rm]");
-  if(!rm) return;
-  cart.splice(+rm.getAttribute("data-rm"),1);
-  renderCart();
+  if(rm){ cart.splice(+rm.getAttribute("data-rm"),1); renderCart(); return; }
+  var inc=e.target.closest("[data-inc]");
+  if(inc){ var ci=+inc.getAttribute("data-inc"); var cp=prod(cart[ci].id); if(cart[ci].qty<sizeQty(cp, cart[ci].size)){ cart[ci].qty++; renderCart(); } return; }
+  var dec=e.target.closest("[data-dec]");
+  if(dec){ var di=+dec.getAttribute("data-dec"); if(cart[di].qty>1){ cart[di].qty--; renderCart(); } return; }
 });
 byId("upiBtn").addEventListener("click", function(){
   /* Direct UPI: the shop's UPI ID / QR is filled in here once the owner shares it.
@@ -984,9 +1008,10 @@ function openQV(id){
   byId("qvOff").textContent = offPct(p) + "% off";
   byId("qvLow").textContent = p.stock===0 ? "This piece is sold out. Ask us on WhatsApp — we hunt similar styles every week." : (p.stock<=2 ? "Only " + p.stock + " left — thrift pieces don't restock." : "");
   byId("qvSizes").innerHTML = p.sizes.map(function(s){
-    var out = p.outSizes.indexOf(s) > -1;
-    return '<button class="size-btn'+(out?" out":"")+'" data-size="'+s+'" '+(out?"disabled":"")+'>'+s+'</button>';
+    var q = sizeQty(p, s), out = q === 0;
+    return '<button class="size-btn'+(out?" out":"")+'" data-size="'+s+'" '+(out?"disabled":"")+'>'+s+(out?"":" ("+q+")")+'</button>';
   }).join("");
+  syncQVQty();
   byId("qvDelivery").innerHTML = deliveryText();
   byId("qvDesc").textContent = p.desc + " Every Thrift Kadai piece is quality-checked and washed before listing. No exchange, no return, no refund — please check the size, price and all details carefully before you order.";
   byId("qvAdd").textContent = p.stock===0 ? "Sold out" : "Add to cart";
@@ -1003,8 +1028,25 @@ byId("qvModal").addEventListener("click", function(e){ if(e.target===this) this.
 byId("qvSizes").addEventListener("click", function(e){
   var b = e.target.closest("[data-size]"); if(!b || b.disabled) return;
   qv.size = b.getAttribute("data-size");
+  qv.qty = 1;
   this.querySelectorAll(".size-btn").forEach(function(x){ x.classList.toggle("on", x===b); });
+  syncQVQty();
 });
+/* Quantity stepper in Quick View: 1 up to however many pieces of the
+   chosen size are left. Hidden until a size is picked. */
+function syncQVQty(){
+  var p = prod(qv.id);
+  var max = qv.size && p ? sizeQty(p, qv.size) : 0;
+  if(qv.qty > max) qv.qty = Math.max(1, max);
+  byId("qvQtyLbl").hidden = !qv.size;
+  byId("qvQtyRow").hidden = !qv.size;
+  byId("qvQtyVal").textContent = qv.qty;
+  byId("qvMinus").disabled = qv.qty <= 1;
+  byId("qvPlus").disabled = qv.qty >= max;
+  byId("qvQtyNote").textContent = qv.size ? ("Only " + max + " left in size " + qv.size) : "";
+}
+byId("qvMinus").addEventListener("click", function(){ if(qv.qty > 1){ qv.qty--; syncQVQty(); } });
+byId("qvPlus").addEventListener("click", function(){ var p = prod(qv.id); var max = qv.size && p ? sizeQty(p, qv.size) : 0; if(qv.qty < max){ qv.qty++; syncQVQty(); } });
 /* One photo-switcher for taps and swipes: shows photo i (wraps around)
    and moves the thumbnail highlight with it. */
 function qvImgCount(){ var p = prod(qv.id); return p ? prodImages(p).length : 0; }
@@ -1047,14 +1089,14 @@ byId("qvBuy").addEventListener("click", function(){
   if(p.stock===0){ window.open("https://wa.me/"+WA+"?text="+encodeURIComponent("Hi Thrift Kadai! The "+p.name+" is sold out — can you hunt a similar piece for me?"), "_blank"); return; }
   if(!qv.size){ toast("Please select a size first"); return; }
   closeAll();
-  openAddr([{id:qv.id, size:qv.size, qty:1}]);
+  openAddr([{id:qv.id, size:qv.size, qty:qv.qty}]);
 });
 
 /* ---------- address + shipping ---------- */
 var STATES = ["Tamil Nadu","Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
 var addrOrder = [];
 function shipFor(state){ return state === "Tamil Nadu" ? 60 : 120; }
-function addrItemsTotal(){ var t = 0; addrOrder.forEach(function(c){ t += prod(c.id).price * 1; }); return t; }
+function addrItemsTotal(){ var t = 0; addrOrder.forEach(function(c){ t += prod(c.id).price * (c.qty||1); }); return t; }
 function renderAddrTotals(){
   var st = byId("addrState").value;
   var ship = shipFor(st);
@@ -1072,7 +1114,7 @@ function openAddr(items){
   }
   byId("addrSummary").innerHTML = addrOrder.map(function(c){
     var p = prod(c.id);
-    return '<div>'+p.name+' — Size '+c.size+' · '+money(p.price)+'</div>';
+    return '<div>'+((c.qty||1)>1 ? (c.qty||1)+" × " : "")+p.name+' — Size '+c.size+' · '+money(p.price*(c.qty||1))+'</div>';
   }).join("");
   renderAddrTotals();
   byId("addrModal").classList.add("open");
@@ -1107,7 +1149,7 @@ byId("addrConfirm").addEventListener("click", function(){
   var trackId = null;
   try{ if(typeof firebase !== "undefined") trackId = makeTrackId(); }catch(e){ trackId = null; }
   var lines = ["Hi Thrift Kadai! I want to order:"];
-  addrOrder.forEach(function(c){ var p = prod(c.id); lines.push("• " + p.name + " — Size " + c.size + " — " + money(p.price)); });
+  addrOrder.forEach(function(c){ var p = prod(c.id); lines.push("• " + ((c.qty||1)>1 ? (c.qty||1)+" × " : "") + p.name + " — Size " + c.size + " — " + money(p.price*(c.qty||1))); });
   lines.push("Items total: " + money(items));
   lines.push("Shipping (" + (st === "Tamil Nadu" ? "within Tamil Nadu" : "outside Tamil Nadu") + "): " + money(ship));
   lines.push("Total to pay: " + money(items + ship));
@@ -1127,7 +1169,7 @@ byId("addrConfirm").addEventListener("click", function(){
     if(typeof firebase !== "undefined" && trackId){
       if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
       firebase.firestore().collection("orders").doc(trackId).set({
-        items: addrOrder.map(function(c){ var p = prod(c.id); return {id: c.id, name: p.name, size: c.size, price: p.price}; }),
+        items: addrOrder.map(function(c){ var p = prod(c.id); return {id: c.id, name: p.name, size: c.size, price: p.price, qty: c.qty||1}; }),
         itemsTotal: items, shipping: ship, total: items + ship,
         state: st,
         customer: {name: name, phone: ph, address: line, city: city, state: st, pincode: pin},
@@ -1249,7 +1291,7 @@ function firestoreProducts(){
             price: +d.price || 0, mrp: +d.mrp || +d.price || 0,
             img: sheetImg(d.img) || "assets/img-5-8cc2a4fb26cd.jpg",
             alt: d.alt || d.name || "",
-            sizes: d.sizes || [], outSizes: d.outSizes || [],
+            sizes: d.sizes || [], outSizes: d.outSizes || [], sizeStock: d.sizeStock || null,
             images: (d.images || []).map(function(u){ return sheetImg(u); }),
             stock: +d.stock || 0, isNew: !!d.isNew, desc: d.desc || ""
           });
