@@ -127,6 +127,7 @@ section.block{padding:58px 0 8px}
 .card-cat{font-size:10.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 .card-name{font-weight:700;font-size:15.5px;line-height:1.3}
 .card-sizes{font-size:12.5px;color:var(--muted)}
+.card-media img,.card-body{cursor:pointer}
 .price-row{display:flex;align-items:baseline;gap:8px;margin-top:auto;padding-top:6px}
 .price{font-weight:800;font-size:17px}
 .mrp{color:var(--muted);text-decoration:line-through;font-size:13.5px}
@@ -713,7 +714,7 @@ function cardHTML(p, extraClass){
   for(var i=0;i<CATS.length;i++) if(CATS[i].name===p.cat) catObj = CATS[i];
   var isWaist = catObj ? !!catObj.waist : (p.cat==="Denims"||p.cat==="Linen Pants");
   var sizes = isWaist ? "Waist " + p.sizes.join(" · ") : "Size " + p.sizes.join(" · ");
-  return '<article class="card '+(extraClass||"")+'">' +
+  return '<article class="card '+(extraClass||"")+'" data-card="'+p.id+'">' +
     '<div class="card-media">' + badge + veil +
       '<img src="'+mainImg(p)+'" alt="'+p.alt+'" loading="lazy" />' +
       '<button class="wish-btn'+(wishlist[p.id]?" active":"")+'" data-wish="'+p.id+'" aria-label="Add to wishlist"><svg viewBox="0 0 24 24" fill="'+(wishlist[p.id]?"currentColor":"none")+'" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20.7C6.4 17 3 13.6 3 9.9 3 7.2 5 5 7.6 5c1.7 0 3.4 1 4.4 2.6C13 6 14.7 5 16.4 5 19 5 21 7.2 21 9.9c0 3.7-3.4 7.1-9 10.8Z"/></svg></button>' +
@@ -1127,6 +1128,8 @@ document.addEventListener("click", function(e){
   if(q){ openQV(+q.getAttribute("data-qv")); return; }
   var a = e.target.closest("[data-add]");
   if(a){ openQV(+a.getAttribute("data-add")); toast("Pick your size to add it"); return; }
+  var c = e.target.closest("[data-card]");
+  if(c){ openQV(+c.getAttribute("data-card")); return; }
 });
 var currentBest = "All";
 byId("bestTabs").addEventListener("click", function(e){ var b=e.target.closest("[data-best]"); if(b) currentBest=b.getAttribute("data-best"); });
