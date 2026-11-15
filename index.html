@@ -323,6 +323,7 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
   body{padding-bottom:52px}
   .toast{bottom:140px}
 }
+#qvImg{cursor:grab;touch-action:pan-y}
 </style>
 </head>
 <body>
@@ -968,7 +969,7 @@ function deliveryText(){
 }
 function openQV(id){
   var p = prod(id); if(!p) return;
-  qv = { id:id, size:null, qty:1 };
+  qv = { id:id, size:null, qty:1, img:0 };
   byId("qvImg").src = mainImg(p); byId("qvImg").alt = p.alt;
   var qvImgs = prodImages(p);
   byId("qvThumbs").innerHTML = qvImgs.map(function(u, i){
@@ -1004,14 +1005,37 @@ byId("qvSizes").addEventListener("click", function(e){
   qv.size = b.getAttribute("data-size");
   this.querySelectorAll(".size-btn").forEach(function(x){ x.classList.toggle("on", x===b); });
 });
+/* One photo-switcher for taps and swipes: shows photo i (wraps around)
+   and moves the thumbnail highlight with it. */
+function qvImgCount(){ var p = prod(qv.id); return p ? prodImages(p).length : 0; }
+function showQVImg(i){
+  var p = prod(qv.id); if(!p) return;
+  var imgs = prodImages(p); if(!imgs.length) return;
+  qv.img = ((i % imgs.length) + imgs.length) % imgs.length;
+  byId("qvImg").src = imgs[qv.img];
+  byId("qvThumbs").querySelectorAll("img").forEach(function(x, j){ x.classList.toggle("on", j===qv.img); });
+}
 byId("qvThumbs").addEventListener("click", function(e){
   var t = e.target.closest("[data-qvthumb]"); if(!t) return;
-  var p = prod(qv.id); if(!p) return;
-  var u = prodImages(p)[+t.getAttribute("data-qvthumb")];
-  if(!u) return;
-  byId("qvImg").src = u;
-  this.querySelectorAll("img").forEach(function(x){ x.classList.toggle("on", x===t); });
+  showQVImg(+t.getAttribute("data-qvthumb"));
 });
+/* Swipe the main photo: finger swipe on a phone, or mouse drag on a
+   computer — left = next photo, right = previous photo. Only a mostly
+   horizontal move counts, so scrolling up and down still works. */
+(function(){
+  var img = byId("qvImg");
+  var startX = 0, startY = 0, dragging = false;
+  img.addEventListener("dragstart", function(e){ e.preventDefault(); });
+  function swipe(dx, dy){
+    if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) && qvImgCount() > 1){
+      showQVImg(qv.img + (dx < 0 ? 1 : -1));
+    }
+  }
+  img.addEventListener("touchstart", function(e){ var t = e.changedTouches[0]; startX = t.clientX; startY = t.clientY; }, {passive:true});
+  img.addEventListener("touchend", function(e){ var t = e.changedTouches[0]; swipe(t.clientX - startX, t.clientY - startY); }, {passive:true});
+  img.addEventListener("mousedown", function(e){ dragging = true; startX = e.clientX; startY = e.clientY; });
+  img.addEventListener("mouseup", function(e){ if(!dragging) return; dragging = false; swipe(e.clientX - startX, e.clientY - startY); });
+})();
 byId("qvAdd").addEventListener("click", function(){
   if(!qv.size){ toast("Please select a size first"); return; }
   addToCart(qv.id, qv.size, qv.qty);
