@@ -946,7 +946,7 @@ function orderCardHTML(o){
     '<div class="order-addr">' + escHtml(c.address||"") + ', ' + escHtml(c.city||"") + ', ' + escHtml(c.state || o.state || "") + ' — ' + escHtml(c.pincode||"") + '</div>' +
     '<div class="order-items">' + items + '</div>' +
     '<div class="order-totals">Items: ' + money(o.itemsTotal||0) + '<br/>Shipping (' + escHtml(o.state==="Tamil Nadu"?"within Tamil Nadu":"outside Tamil Nadu") + '): ' + money(o.shipping||0) + '<br/><strong>Total to pay: ' + money(o.total||0) + '</strong></div>' +
-    (o.paymentId ? '<div class="order-paid">Paid online (Razorpay) · ' + escHtml(o.paymentId) + '</div>' : '<div class="order-paid upi">Pay by UPI after confirmation</div>') +
+    (o.paymentId ? '<div class="order-paid">Paid online (Razorpay) · ' + escHtml(o.paymentId) + '</div>' : '') +
     '<div class="order-actions"><label>Status <select data-order-status="' + o.docId + '">' + opts + '</select></label>' +
     '<a class="btn btn-outline" href="https://wa.me/91' + escHtml(c.phone||"") + '" target="_blank" rel="noopener">WhatsApp customer</a>' +
     '<button class="btn-remove" data-order-remove="' + o.docId + '">Delete</button></div></article>';

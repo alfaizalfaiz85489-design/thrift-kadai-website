@@ -482,7 +482,7 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
   <div class="wrap"><div class="trust">
     <div class="trust-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
-      <h3>Pay by UPI, directly</h3><p>Order on WhatsApp first — then pay the shop directly by UPI. No middleman and no extra fee; the shop shares its UPI ID and QR on WhatsApp.</p>
+      <h3>Pay online, securely</h3><p>Pay at checkout with UPI, cards, net banking or wallets — handled securely by Razorpay. No extra fee for you.</p>
       <div class="pay-chips"><span>UPI</span><span>GPay</span><span>PhonePe</span><span>Paytm UPI</span></div>
     </div>
     <div class="trust-item">
@@ -525,11 +525,11 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
       </details>
       <details class="pol">
         <summary>How ordering works <span>+</span></summary>
-        <p>Pick your pieces, add them to the cart and check out — fill your delivery address and shipping is added automatically (₹60 within Tamil Nadu, ₹120 outside Tamil Nadu). Pay online at checkout, or confirm your order on WhatsApp and pay by direct UPI after we confirm availability and your size. Delivery dates show on every product — usually 3 to 7 days.</p>
+        <p>Pick your pieces, add them to the cart and check out — fill your delivery address and shipping is added automatically (₹60 within Tamil Nadu, ₹120 outside Tamil Nadu). Pay online securely at checkout — UPI, cards, net banking and wallets — and we confirm availability and your size on WhatsApp. Delivery dates show on every product — usually 3 to 7 days.</p>
       </details>
       <details class="pol">
         <summary>Payments <span>+</span></summary>
-        <p>Payment is by direct UPI. Once your order is confirmed on WhatsApp, the shop shares its UPI ID and QR code — pay with any UPI app like GPay, PhonePe or Paytm. You can also pay at the store when you pick up your order.</p>
+        <p>Payment is online at checkout via Razorpay — UPI, cards, net banking and wallets. You can also pay at the store when you pick up your order.</p>
       </details>
     </div>
   </div></div>
@@ -572,21 +572,13 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
   <div class="cart-items" id="cartItems"></div>
   <div class="cart-foot">
     <div class="subtotal"><span>Subtotal</span><span id="cartTotal">₹0</span></div>
-    <p class="ship-note">Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — added at checkout. Pay online at checkout, or order on WhatsApp and pay by direct UPI after we confirm your pieces.</p>
+    <p class="ship-note">Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — added at checkout. Pay online securely at checkout — UPI, cards, net banking and wallets.</p>
     <div class="policy-note">No exchange · No return · No refund — please check the size, price and all details carefully before you order.</div>
     <button class="btn btn-accent" id="checkoutBtn">Continue to delivery details</button>
     <button class="btn btn-outline" id="continueBtn">Continue shopping</button>
     <!-- PAYMENT: Razorpay is live (owner's account, website verified).
          checkout.js opens the Razorpay payment popup at checkout. -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <div class="upi-box">
-      <div class="upi-qr" aria-hidden="true">UPI<br/>QR</div>
-      <div class="upi-info">
-        <strong>Pay by UPI</strong>
-        <span>UPI ID &amp; QR: shared by the shop on WhatsApp once your order is confirmed.</span>
-        <button class="btn btn-dark" id="upiBtn" style="padding:10px 16px;font-size:13px;margin-top:8px">Pay by UPI</button>
-      </div>
-    </div>
   </div>
 </aside>
 
@@ -652,7 +644,6 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
         <button class="btn btn-dark" id="addrBack" style="flex:1;justify-content:center">Back</button>
         <button class="btn btn-accent" id="addrConfirm" style="flex:2;justify-content:center">Pay online</button>
       </div>
-      <button class="btn btn-outline" id="addrWhatsApp" style="width:100%;justify-content:center;margin-top:10px">Order on WhatsApp instead — pay by UPI later</button>
     </div>
   </div>
 </div>
@@ -970,12 +961,6 @@ byId("cartItems").addEventListener("click", function(e){
   var dec=e.target.closest("[data-dec]");
   if(dec){ var di=+dec.getAttribute("data-dec"); if(cart[di].qty>1){ cart[di].qty--; renderCart(); } return; }
 });
-byId("upiBtn").addEventListener("click", function(){
-  /* Direct UPI: the shop's UPI ID / QR is filled in here once the owner shares it.
-     Until then, payment details are handed over on WhatsApp after order confirmation. */
-  var msg = cart.length ? "Hi Thrift Kadai! I have placed an order — please share your UPI ID / QR so I can pay by UPI." : "Hi Thrift Kadai! Please share your UPI ID / QR so I can pay by UPI.";
-  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg), "_blank");
-});
 /* RAZORPAY — live. Opens the Razorpay payment popup (UPI, cards, net
    banking, wallets). onPaid runs only after a successful payment, with
    the Razorpay payment ID. If the customer closes the popup without
@@ -1168,11 +1153,10 @@ function readAddrForm(){
   if(!/^\d{6}$/.test(pin)){ toast("Please enter a valid 6-digit pincode"); return null; }
   return {name:name, phone:ph, line:line, city:city, state:st, pin:pin};
 }
-/* Place the order: save it to Firestore (so the owner sees it in the
-   dashboard) and open WhatsApp with the order details. payMethod is
-   "razorpay" (already paid — paymentId is the Razorpay payment ID) or
-   "upi" (pay later by direct UPI after the shop confirms). */
-function placeOrder(f, payMethod, paymentId){
+/* Place the order after a successful Razorpay payment: save it to
+   Firestore (so the owner sees it in the dashboard) and open WhatsApp
+   with the order details, including the Razorpay payment ID. */
+function placeOrder(f, paymentId){
   var items = addrItemsTotal(), ship = shipFor(f.state);
   var trackId = null;
   try{ if(typeof firebase !== "undefined") trackId = makeTrackId(); }catch(e){ trackId = null; }
@@ -1181,9 +1165,7 @@ function placeOrder(f, payMethod, paymentId){
   lines.push("Items total: " + money(items));
   lines.push("Shipping (" + (f.state === "Tamil Nadu" ? "within Tamil Nadu" : "outside Tamil Nadu") + "): " + money(ship));
   lines.push("Total to pay: " + money(items + ship));
-  if(payMethod === "razorpay"){
-    lines.push("Paid online via Razorpay — Payment ID: " + paymentId);
-  }
+  lines.push("Paid online via Razorpay — Payment ID: " + paymentId);
   lines.push("Deliver to:");
   lines.push(f.name);
   lines.push(f.line + ", " + f.city + ", " + f.state + " — " + f.pin);
@@ -1192,11 +1174,7 @@ function placeOrder(f, payMethod, paymentId){
     lines.push("Track ID: " + trackId);
     lines.push("Track your order: https://alfaizalfaiz85489-design.github.io/thrift-kadai-website/track.html?id=" + trackId);
   }
-  if(payMethod === "razorpay"){
-    lines.push("Please confirm availability and dispatch the order.");
-  } else {
-    lines.push("Please confirm availability and share your UPI ID / QR — I will pay by direct UPI.");
-  }
+  lines.push("Please confirm availability and dispatch the order.");
   /* Save the order to Firestore so the owner also sees it in the
      dashboard's Orders list (status starts as "new"). Fire-and-forget:
      WhatsApp opens even if the save fails or Firebase is unreachable. */
@@ -1209,7 +1187,7 @@ function placeOrder(f, payMethod, paymentId){
         state: f.state,
         customer: {name: f.name, phone: f.phone, address: f.line, city: f.city, state: f.state, pincode: f.pin},
         status: "new",
-        payMethod: payMethod,
+        payMethod: "razorpay",
         paymentId: paymentId || null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
@@ -1224,14 +1202,8 @@ byId("addrConfirm").addEventListener("click", function(){
   var f = readAddrForm(); if(!f) return;
   var total = (addrItemsTotal() + shipFor(f.state)) * 100;
   openRazorpayCheckout(total, {name: f.name, contact: "+91" + f.phone}, function(paymentId){
-    placeOrder(f, "razorpay", paymentId);
+    placeOrder(f, paymentId);
   });
-});
-/* WhatsApp path (as before): order now, pay by direct UPI after the shop
-   confirms availability. */
-byId("addrWhatsApp").addEventListener("click", function(){
-  var f = readAddrForm(); if(!f) return;
-  placeOrder(f, "upi", null);
 });
 
 /* ---------- global card actions (event delegation) ---------- */

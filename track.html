@@ -125,7 +125,7 @@ function renderOrder(docId, d){
   var items = (d.items||[]).map(function(it){ return ((it.qty||1)>1 ? (it.qty||1)+" × " : "") + esc(it.name) + " — Size " + esc(it.size) + " · " + money(it.price*(it.qty||1)); }).join("<br/>");
   html += '<div class="items">' + items + '</div>' +
     '<div class="totals">Items: ' + money(d.itemsTotal||0) + '<br/>Shipping: ' + money(d.shipping||0) +
-    '<br/><strong>Total to pay: ' + money(d.total||0) + '</strong><br/>' + (d.paymentId ? 'Paid online via Razorpay<br/>' : 'Pay by UPI after the shop confirms<br/>') + 'Delivering to: ' + esc(d.state||"") + '</div>' +
+    '<br/><strong>Total to pay: ' + money(d.total||0) + '</strong><br/>' + (d.paymentId ? 'Paid online via Razorpay<br/>' : '') + 'Delivering to: ' + esc(d.state||"") + '</div>' +
     '<div class="live"><span class="dot"></span>Live — this page updates by itself when the shop changes your order status.</div></div>';
   byId("trackResult").innerHTML = html;
 }
