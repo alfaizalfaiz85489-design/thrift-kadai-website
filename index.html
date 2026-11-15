@@ -525,7 +525,7 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
       </details>
       <details class="pol">
         <summary>How ordering works <span>+</span></summary>
-        <p>Pick your pieces, add them to the cart and check out — fill your delivery address and shipping is added automatically (₹60 within Tamil Nadu, ₹120 outside Tamil Nadu). Confirm your order on WhatsApp, we confirm availability and your size, share our UPI ID and QR for direct payment, and hold the piece for you. Delivery dates show on every product — usually 3 to 7 days.</p>
+        <p>Pick your pieces, add them to the cart and check out — fill your delivery address and shipping is added automatically (₹60 within Tamil Nadu, ₹120 outside Tamil Nadu). Pay online at checkout, or confirm your order on WhatsApp and pay by direct UPI after we confirm availability and your size. Delivery dates show on every product — usually 3 to 7 days.</p>
       </details>
       <details class="pol">
         <summary>Payments <span>+</span></summary>
@@ -572,14 +572,13 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
   <div class="cart-items" id="cartItems"></div>
   <div class="cart-foot">
     <div class="subtotal"><span>Subtotal</span><span id="cartTotal">₹0</span></div>
-    <p class="ship-note">Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — added at checkout. We confirm your pieces on WhatsApp, then share our UPI ID / QR so you can pay by direct UPI.</p>
+    <p class="ship-note">Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — added at checkout. Pay online at checkout, or order on WhatsApp and pay by direct UPI after we confirm your pieces.</p>
     <div class="policy-note">No exchange · No return · No refund — please check the size, price and all details carefully before you order.</div>
     <button class="btn btn-accent" id="checkoutBtn">Continue to delivery details</button>
     <button class="btn btn-outline" id="continueBtn">Continue shopping</button>
-    <!-- PAYMENT SLOT: Direct UPI for now (owner has no Razorpay account).
-         RAZORPAY SLOT: if the owner opens a Razorpay account later, load
-         https://checkout.razorpay.com/v1/checkout.js here and wire the
-         checkout button to openRazorpayCheckout() in the script below. -->
+    <!-- PAYMENT: Razorpay is live (owner's account, website verified).
+         checkout.js opens the Razorpay payment popup at checkout. -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <div class="upi-box">
       <div class="upi-qr" aria-hidden="true">UPI<br/>QR</div>
       <div class="upi-info">
@@ -651,8 +650,9 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
       <div class="policy-note">No exchange · No return · No refund — please check the size, price, address and all details carefully before you confirm.</div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn btn-dark" id="addrBack" style="flex:1;justify-content:center">Back</button>
-        <button class="btn btn-accent" id="addrConfirm" style="flex:2;justify-content:center">Confirm order on WhatsApp</button>
+        <button class="btn btn-accent" id="addrConfirm" style="flex:2;justify-content:center">Pay online</button>
       </div>
+      <button class="btn btn-outline" id="addrWhatsApp" style="width:100%;justify-content:center;margin-top:10px">Order on WhatsApp instead — pay by UPI later</button>
     </div>
   </div>
 </div>
@@ -673,6 +673,10 @@ footer p{color:#b9bfd4;font-size:14.5px;line-height:1.7;margin:0}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 var WA = "917010711860";
+/* RAZORPAY KEY ID — the publishable key for the owner's Razorpay account.
+   It is public by design and safe to have in this file. The Key Secret
+   must NEVER be put here (or sent in chat). */
+var RAZORPAY_KEY_ID = "rzp_live_U0OU8iYrKOJg4a";
 var PRODUCTS = [
  {id:1, name:"Sky Check Casual Shirt", cat:"Shirts", price:499, mrp:999, img:"assets/img-5-8cc2a4fb26cd.jpg", alt:"Light blue checkered casual shirt on a hanger", sizes:["S","M","L","XL"], outSizes:["L"], stock:3, isNew:true, desc:"A light-blue micro-check shirt in soft cotton — the kind of clean, everyday piece that sells out first at the rack. Checked, washed and ready to wear."},
  {id:2, name:"Indigo Solid Shirt", cat:"Shirts", price:549, mrp:1099, img:"assets/img-6-2e1631b6f9a3.jpg", alt:"Solid indigo blue casual shirt", sizes:["S","M","L","XL"], outSizes:[], stock:0, isNew:false, desc:"Deep indigo solid shirt with a sharp collar. Pairs with everything from denims to linen pants."},
@@ -972,12 +976,25 @@ byId("upiBtn").addEventListener("click", function(){
   var msg = cart.length ? "Hi Thrift Kadai! I have placed an order — please share your UPI ID / QR so I can pay by UPI." : "Hi Thrift Kadai! Please share your UPI ID / QR so I can pay by UPI.";
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg), "_blank");
 });
-/* RAZORPAY SLOT (not active): the owner has no Razorpay account yet, so no
-   Razorpay keys are used anywhere. If he opens one later: load
-   https://checkout.razorpay.com/v1/checkout.js, create the order, and call
-   openRazorpayCheckout(totalInPaise) from the checkout button instead of the
-   WhatsApp-only flow. The WhatsApp + direct UPI flow above stays as fallback. */
-function openRazorpayCheckout(totalInPaise){ toast("Online card payment is not live yet — please pay by UPI."); }
+/* RAZORPAY — live. Opens the Razorpay payment popup (UPI, cards, net
+   banking, wallets). onPaid runs only after a successful payment, with
+   the Razorpay payment ID. If the customer closes the popup without
+   paying, nothing is ordered. */
+function openRazorpayCheckout(totalInPaise, prefill, onPaid){
+  if(typeof Razorpay === "undefined"){ toast("Online payment is not available right now — please order on WhatsApp instead."); return; }
+  var rz = new Razorpay({
+    key: RAZORPAY_KEY_ID,
+    amount: totalInPaise,
+    currency: "INR",
+    name: "Thrift Kadai",
+    description: "Thrift Kadai order — Madurai",
+    prefill: prefill,
+    theme: {color: "#c2410c"},
+    handler: function(resp){ onPaid(resp.razorpay_payment_id); },
+    modal: {ondismiss: function(){ toast("Payment not completed — your order was not placed."); }}
+  });
+  rz.open();
+}
 
 byId("checkoutBtn").addEventListener("click", function(){
   if(!cart.length){ toast("Your cart is empty"); return; }
@@ -1106,6 +1123,7 @@ function renderAddrTotals(){
     '<div class="t-row"><span>Items total</span><span>'+money(items)+'</span></div>' +
     '<div class="t-row"><span>Shipping ('+(st === "Tamil Nadu" ? "within Tamil Nadu" : "outside Tamil Nadu")+')</span><span>'+money(ship)+'</span></div>' +
     '<div class="t-row t-total"><span>Total to pay</span><span>'+money(items + ship)+'</span></div>';
+  byId("addrConfirm").textContent = "Pay " + money(items + ship) + " online";
 }
 function openAddr(items){
   addrOrder = items;
@@ -1133,7 +1151,9 @@ function makeTrackId(){
   for(var i=0;i<8;i++) t += chars[Math.floor(Math.random()*chars.length)];
   return t;
 }
-byId("addrConfirm").addEventListener("click", function(){
+/* Read + validate the delivery form. Returns the details, or null
+   (with a toast) when something is missing. */
+function readAddrForm(){
   var name = byId("addrName").value.trim();
   var ph = byId("addrPhone").value.replace(/\D/g, "");
   if(ph.length === 12 && ph.indexOf("91") === 0) ph = ph.slice(2);
@@ -1141,28 +1161,42 @@ byId("addrConfirm").addEventListener("click", function(){
   var city = byId("addrCity").value.trim();
   var st = byId("addrState").value;
   var pin = byId("addrPin").value.trim();
-  if(!name){ toast("Please enter your name"); return; }
-  if(!/^[6-9]\d{9}$/.test(ph)){ toast("Please enter a valid 10-digit mobile number"); return; }
-  if(!line){ toast("Please enter your full address"); return; }
-  if(!city){ toast("Please enter your city"); return; }
-  if(!/^\d{6}$/.test(pin)){ toast("Please enter a valid 6-digit pincode"); return; }
-  var items = addrItemsTotal(), ship = shipFor(st);
+  if(!name){ toast("Please enter your name"); return null; }
+  if(!/^[6-9]\d{9}$/.test(ph)){ toast("Please enter a valid 10-digit mobile number"); return null; }
+  if(!line){ toast("Please enter your full address"); return null; }
+  if(!city){ toast("Please enter your city"); return null; }
+  if(!/^\d{6}$/.test(pin)){ toast("Please enter a valid 6-digit pincode"); return null; }
+  return {name:name, phone:ph, line:line, city:city, state:st, pin:pin};
+}
+/* Place the order: save it to Firestore (so the owner sees it in the
+   dashboard) and open WhatsApp with the order details. payMethod is
+   "razorpay" (already paid — paymentId is the Razorpay payment ID) or
+   "upi" (pay later by direct UPI after the shop confirms). */
+function placeOrder(f, payMethod, paymentId){
+  var items = addrItemsTotal(), ship = shipFor(f.state);
   var trackId = null;
   try{ if(typeof firebase !== "undefined") trackId = makeTrackId(); }catch(e){ trackId = null; }
   var lines = ["Hi Thrift Kadai! I want to order:"];
   addrOrder.forEach(function(c){ var p = prod(c.id); lines.push("• " + ((c.qty||1)>1 ? (c.qty||1)+" × " : "") + p.name + " — Size " + c.size + " — " + money(p.price*(c.qty||1))); });
   lines.push("Items total: " + money(items));
-  lines.push("Shipping (" + (st === "Tamil Nadu" ? "within Tamil Nadu" : "outside Tamil Nadu") + "): " + money(ship));
+  lines.push("Shipping (" + (f.state === "Tamil Nadu" ? "within Tamil Nadu" : "outside Tamil Nadu") + "): " + money(ship));
   lines.push("Total to pay: " + money(items + ship));
+  if(payMethod === "razorpay"){
+    lines.push("Paid online via Razorpay — Payment ID: " + paymentId);
+  }
   lines.push("Deliver to:");
-  lines.push(name);
-  lines.push(line + ", " + city + ", " + st + " — " + pin);
-  lines.push("Phone: " + ph);
+  lines.push(f.name);
+  lines.push(f.line + ", " + f.city + ", " + f.state + " — " + f.pin);
+  lines.push("Phone: " + f.phone);
   if(trackId){
     lines.push("Track ID: " + trackId);
     lines.push("Track your order: https://alfaizalfaiz85489-design.github.io/thrift-kadai-website/track.html?id=" + trackId);
   }
-  lines.push("Please confirm availability and share your UPI ID / QR — I will pay by direct UPI.");
+  if(payMethod === "razorpay"){
+    lines.push("Please confirm availability and dispatch the order.");
+  } else {
+    lines.push("Please confirm availability and share your UPI ID / QR — I will pay by direct UPI.");
+  }
   /* Save the order to Firestore so the owner also sees it in the
      dashboard's Orders list (status starts as "new"). Fire-and-forget:
      WhatsApp opens even if the save fails or Firebase is unreachable. */
@@ -1172,15 +1206,32 @@ byId("addrConfirm").addEventListener("click", function(){
       firebase.firestore().collection("orders").doc(trackId).set({
         items: addrOrder.map(function(c){ var p = prod(c.id); return {id: c.id, name: p.name, size: c.size, price: p.price, qty: c.qty||1}; }),
         itemsTotal: items, shipping: ship, total: items + ship,
-        state: st,
-        customer: {name: name, phone: ph, address: line, city: city, state: st, pincode: pin},
+        state: f.state,
+        customer: {name: f.name, phone: f.phone, address: f.line, city: f.city, state: f.state, pincode: f.pin},
         status: "new",
+        payMethod: payMethod,
+        paymentId: paymentId || null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
     }
   }catch(e){}
   byId("addrModal").classList.remove("open");
   window.open("https://wa.me/" + WA + "?text=" + encodeURIComponent(lines.join("\n")), "_blank");
+}
+/* Pay online: validate the form, then open the Razorpay popup. The order
+   is placed only after the payment succeeds. */
+byId("addrConfirm").addEventListener("click", function(){
+  var f = readAddrForm(); if(!f) return;
+  var total = (addrItemsTotal() + shipFor(f.state)) * 100;
+  openRazorpayCheckout(total, {name: f.name, contact: "+91" + f.phone}, function(paymentId){
+    placeOrder(f, "razorpay", paymentId);
+  });
+});
+/* WhatsApp path (as before): order now, pay by direct UPI after the shop
+   confirms availability. */
+byId("addrWhatsApp").addEventListener("click", function(){
+  var f = readAddrForm(); if(!f) return;
+  placeOrder(f, "upi", null);
 });
 
 /* ---------- global card actions (event delegation) ---------- */
