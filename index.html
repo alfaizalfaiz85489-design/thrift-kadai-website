@@ -1255,20 +1255,23 @@ function renderRail(){
   layoutRail();
   requestAnimationFrame(updateRailCentre);
 }
-/* Centre the garment group when it fits the viewport; otherwise give
-   the track just enough side padding for the first/last piece to centre
-   while scrolling. (The old fixed 50vw padding left the left half of
-   the rail empty and pushed the last piece off-screen on wide screens.) */
+/* Side padding must let EVERY piece centre, not just the group.
+   The old fits-branch used (clientWidth - content)/2, which centred
+   the group but left almost no scroll room on wide screens: at 1919px
+   maxScroll was 56px, so a real mouse drag from a shirt photo moved
+   scrollLeft 0 -> 56 and snapped straight back to piece 3 — the drag
+   handler ran fine (pointerdown/pointermove all fired), there was
+   simply nowhere to scroll to, and the user saw "drag does nothing".
+   With (clientWidth - w)/2 the resting layout is pixel-identical
+   (middle piece centred) but maxScroll = (n-1)*(w+gap), so dragging
+   can centre pieces 1..5 at every width. */
 function layoutRail(){
   var vp = byId("railViewport"), track = byId("railTrack"); if(!vp || !track) return;
   var items = track.querySelectorAll(".rail-item");
   if(!items.length){ track.style.paddingLeft = ""; track.style.paddingRight = ""; return; }
   var w = items[0].offsetWidth || 210;
   var gap = parseFloat(window.getComputedStyle(track).columnGap) || 56;
-  var content = items.length * w + (items.length - 1) * gap;
-  var pad = content <= vp.clientWidth
-    ? Math.max(0, (vp.clientWidth - content) / 2)
-    : Math.max(24, (vp.clientWidth - w) / 2);
+  var pad = Math.max(24, (vp.clientWidth - w) / 2);
   track.style.paddingLeft = pad + "px";
   track.style.paddingRight = pad + "px";
   /* The track's right padding does not count toward the scrollable width
@@ -1537,7 +1540,17 @@ function closeSearch(){
     dragRaf = requestAnimationFrame(step);
   }
   vp.addEventListener("dragstart", function(e){ e.preventDefault(); });
-  vp.addEventListener("pointerdown", function(e){
+  /* The drag starts ANYWHERE on the rail stage — garment photos, the
+     gaps between them, the rail bar, and the hint/counter strips above
+     and below — so a laptop user can grab the rail wherever the mouse
+     is. (The hint/counter sit outside the scrolling viewport, so a
+     viewport-only listener never saw drags that began on them.) When
+     the detail view is open its own spin drag owns the pointer, so
+     stage drags are ignored then. */
+  var stage = byId("railStage");
+  (stage || vp).addEventListener("pointerdown", function(e){
+    if(railDetail) return;
+    if(e.target.closest && e.target.closest("#railDetail")) return;
     moved = 0; downItem = null;
     if(e.pointerType === "touch") return;
     if(dragRaf){ cancelAnimationFrame(dragRaf); dragRaf = null; }
