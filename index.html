@@ -224,7 +224,7 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
 .rail-stage{position:relative;background:linear-gradient(180deg,var(--rail-bg2),var(--rail-bg) 60%,#e6eaed);min-height:calc(100dvh - 64px);overflow:hidden;display:flex;flex-direction:column}
 .rail-hint{text-align:center;font-family:var(--cond);font-weight:500;font-size:12px;letter-spacing:.28em;color:var(--rail-muted);padding:20px 16px 0;text-transform:uppercase}
 .rail-count{text-align:center;font-family:var(--cond);font-weight:500;font-size:12px;letter-spacing:.28em;color:var(--rail-muted);padding:0 16px 26px;text-transform:uppercase}
-.rail-viewport{position:relative;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-snap-type:x proximity;cursor:grab;touch-action:pan-x}
+.rail-viewport{position:relative;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-snap-type:x proximity;cursor:grab;touch-action:pan-x;user-select:none;-webkit-user-select:none}
 .rail-viewport::-webkit-scrollbar{display:none}
 .rail-viewport.dragging{cursor:grabbing;scroll-snap-type:none}
 .rail-line{position:absolute;left:0;right:0;top:70px;height:3px;background:linear-gradient(90deg,#b9bfc5,#d7dbde 30%,#c3c9ce 70%,#b9bfc5);box-shadow:0 2px 4px rgba(20,20,20,.18);z-index:1}
@@ -317,6 +317,28 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
   .rail-item .garment{animation:none}
   .rail-track,.rail-item,.rail-detail,.rail-detail-fig{transition:none}
 }
+/* ---------- shop by category — sections below the rail ----------
+   Built from the live catalog only: one block per category that has
+   at least one real product. No sample or fake products ever. */
+#catSections{max-width:1280px;margin:0 auto;padding:34px 20px 10px}
+.cat-sections-title{font-family:var(--cond);font-weight:700;font-size:clamp(22px,4vw,30px);letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin:0 0 6px}
+.cat-sections-sub{color:var(--muted);font-size:14.5px;line-height:1.5;margin:0 0 22px}
+.cat-block{margin:0 0 34px}
+.cat-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-bottom:1.5px solid var(--line);padding-bottom:10px;margin-bottom:16px}
+.cat-head h2{font-family:var(--cond);font-weight:700;font-size:clamp(20px,3.6vw,26px);letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin:0}
+.cat-viewall{border:0;background:none;font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px 0;white-space:nowrap}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:18px}
+.cat-card{cursor:pointer}
+.cat-card-media{position:relative;background:#fff;border:1px solid #e2e5e7;overflow:hidden}
+.cat-card-media img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+.cat-sold{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-6deg);font-family:var(--cond);font-weight:600;font-size:15px;letter-spacing:.2em;color:#fff;border:2px solid #fff;padding:3px 10px;background:rgba(20,20,20,.45);white-space:nowrap}
+.cat-card-name{font-family:var(--cond);font-weight:600;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-top:10px}
+.cat-card-price{font-family:var(--cond);font-weight:500;font-size:14px;letter-spacing:.06em;color:var(--ink);margin-top:2px}
+.cat-card-price s{color:var(--muted);font-weight:400;margin-left:6px}
+@media (max-width:760px){
+  #catSections{padding:26px 16px 6px}
+  .cat-grid{grid-template-columns:repeat(2,1fr);gap:14px}
+}
 
 </style>
 </head>
@@ -377,6 +399,9 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
       </div>
     </div>
   </section>
+
+  <!-- SHOP BY CATEGORY — sections below the rail, built from the live catalog -->
+  <section id="catSections" aria-label="Shop by category"></section>
 
   <!-- FULL CATALOG — opens from the top-bar search icon -->
   <div class="search-overlay" id="searchOverlay" aria-hidden="true">
@@ -1051,7 +1076,40 @@ function rerenderAll(){
   renderRail();
   renderCatalog();
   renderCategoryUI();
+  renderCatSections();
   syncCounts();
+}
+
+/* ---------- shop by category — sections below the rail ----------
+   One block per category that has at least one REAL product in the
+   live catalog (CATS order first, then any other product category).
+   Never renders while the live catalog is still loading, never shows
+   an empty category, never uses sample products. Tapping a piece
+   opens the same detail view as the rail; "View all" opens the
+   search overlay filtered to that category. */
+function renderCatSections(){
+  var host = byId("catSections"); if(!host) return;
+  if(!LIVE_CATALOG){ host.innerHTML = ""; return; }
+  var order = [];
+  CATS.forEach(function(c){ if(order.indexOf(c.name) < 0) order.push(c.name); });
+  PRODUCTS.forEach(function(p){ if(p.cat && order.indexOf(p.cat) < 0) order.push(p.cat); });
+  var html = "";
+  order.forEach(function(cat){
+    var list = PRODUCTS.filter(function(p){ return p.cat === cat; });
+    if(!list.length) return;
+    html += '<div class="cat-block"><div class="cat-head"><h2>' + cat + '</h2>' +
+      '<button class="cat-viewall" data-cat-viewall="' + cat.replace(/"/g, "&quot;") + '">View all</button></div>' +
+      '<div class="cat-grid">' + list.map(function(p){
+        return '<article class="cat-card" data-rail="' + p.id + '" role="button" tabindex="0" aria-label="' + p.name + ' — ' + money(p.price) + '">' +
+          '<div class="cat-card-media"><img src="' + mainImg(p) + '" alt="' + p.alt + '" loading="lazy" draggable="false" />' +
+          (p.stock === 0 ? '<span class="cat-sold">Sold out</span>' : '') + '</div>' +
+          '<div class="cat-card-name">' + p.name + '</div>' +
+          '<div class="cat-card-price">' + money(p.price) + (p.mrp > p.price ? ' <s>' + money(p.mrp) + '</s>' : '') + '</div></article>';
+      }).join("") + '</div></div>';
+  });
+  host.innerHTML = html
+    ? '<h2 class="cat-sections-title">Shop by Category</h2><p class="cat-sections-sub">Tap a piece to view it in 3D — every piece is checked, washed and ready to wear.</p>' + html
+    : "";
 }
 function loadSheetCatalog(){
   var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json&sheet=Sheet1&headers=1";
@@ -1238,6 +1296,15 @@ function railCentreIndex(){
   });
   return best;
 }
+/* The edge fades sit inside the scrolling viewport, so without this
+   they drift across the screen as the rail scrolls and wash out the
+   centre garment with a pale "white shadow" band. Pin them to the
+   viewport's visible edges on every scroll/layout. */
+function pinRailFades(){
+  var vp = byId("railViewport"); if(!vp) return;
+  var sl = vp.scrollLeft, i, fades = document.querySelectorAll(".rail-fade");
+  for(i = 0; i < fades.length; i++) fades[i].style.transform = "translateX(" + sl + "px)";
+}
 function updateRailCentre(){
   var vp = byId("railViewport"); if(!vp) return;
   if(!LIVE_CATALOG){ byId("railCount").textContent = CATALOG_ERROR ? "COULDN'T LOAD THE RACK" : "LOADING THE RACK…"; return; }
@@ -1253,6 +1320,7 @@ function updateRailCentre(){
   var i = railCentreIndex();
   setRailCounter(i);
   railIdx = i;
+  pinRailFades();
 }
 function scrollRailTo(i, smooth){
   var vp = byId("railViewport"); if(!vp) return;
@@ -1427,34 +1495,87 @@ function closeSearch(){
     if(raf) return;
     raf = requestAnimationFrame(function(){ raf = null; updateRailCentre(); });
   }, {passive:true});
+  /* Mouse/trackpad drag: click-and-drag scrolls the rail with momentum.
+     The drag starts ANYWHERE on the rail — garment photos included.
+     preventDefault() on pointerdown is the key: without it the browser
+     starts its own native image drag when a drag begins on a shirt
+     photo, hijacking the pointer and the rail never moves (dragging
+     from the empty strip above the shirts worked, dragging a shirt
+     did not). Pointer capture keeps the move/up stream coming even if
+     the pointer leaves the rail. A plain click (moved < 6px) still
+     opens the piece — handled here for mouse, since capture retargets
+     the click. */
   var dragging = false, startX = 0, startScroll = 0, moved = 0;
+  var dragVel = 0, dragLastX = 0, dragLastT = 0, dragRaf = null;
+  var downItem = null, clickGuard = 0;
+  function railDragStop(){
+    if(dragRaf){ cancelAnimationFrame(dragRaf); dragRaf = null; }
+    if(!dragging) return;
+    dragging = false;
+    if(moved < 6 && downItem){
+      /* a tap, not a drag: open the piece that was pressed */
+      var id = +downItem.getAttribute("data-rail");
+      downItem = null;
+      vp.classList.remove("dragging");
+      clickGuard = Date.now();
+      openRailDetail(id);
+      return;
+    }
+    downItem = null;
+    /* Keep scroll-snap off (.dragging) while the rail glides: with
+       snap back on, the browser pulls every programmatic scroll back
+       to the nearest snap point and the glide goes nowhere. */
+    if(REDUCED || Math.abs(dragVel) < 0.15){ vp.classList.remove("dragging"); snapRail(); return; }
+    /* inertia: keep gliding with decaying speed, then snap to a piece */
+    var v = dragVel * 16;
+    var step = function(){
+      v *= 0.94;
+      vp.scrollLeft -= v;
+      if(Math.abs(v) > 0.6){ dragRaf = requestAnimationFrame(step); }
+      else { dragRaf = null; vp.classList.remove("dragging"); snapRail(); }
+    };
+    dragRaf = requestAnimationFrame(step);
+  }
+  vp.addEventListener("dragstart", function(e){ e.preventDefault(); });
   vp.addEventListener("pointerdown", function(e){
-    moved = 0;
+    moved = 0; downItem = null;
     if(e.pointerType === "touch") return;
+    if(dragRaf){ cancelAnimationFrame(dragRaf); dragRaf = null; }
+    /* Stop the browser's native image drag + text selection before
+       they start — otherwise a drag that begins on a shirt photo is
+       swallowed by the native drag and the rail stays put. */
+    e.preventDefault();
+    try{ vp.setPointerCapture(e.pointerId); }catch(err){}
     dragging = true; startX = e.clientX; startScroll = vp.scrollLeft;
+    dragLastX = e.clientX; dragLastT = performance.now(); dragVel = 0;
+    downItem = e.target.closest ? e.target.closest("[data-rail]") : null;
     vp.classList.add("dragging");
   });
   window.addEventListener("pointermove", function(e){
     if(!dragging) return;
     var dx = e.clientX - startX;
     moved = Math.max(moved, Math.abs(dx));
+    var now = performance.now(), dt = Math.max(1, now - dragLastT);
+    dragVel = (e.clientX - dragLastX) / dt;
+    dragLastX = e.clientX; dragLastT = now;
     vp.scrollLeft = startScroll - dx;
   });
-  window.addEventListener("pointerup", function(e){
-    if(!dragging) return;
-    dragging = false; vp.classList.remove("dragging");
-    snapRail();
-  });
-  /* tap / click opens the detail view; a drag (moved >= 6px) does not */
+  window.addEventListener("pointerup", railDragStop);
+  window.addEventListener("pointercancel", railDragStop);
+  /* Tap / click opens the detail view. Mouse taps are handled in
+     railDragStop above (pointer capture retargets the click), so this
+     only needs to fire for touch taps and keyboard clicks. */
   vp.addEventListener("click", function(e){
+    if(Date.now() - clickGuard < 600){ moved = 0; return; }
     if(moved >= 6){ moved = 0; return; }
     moved = 0;
     var item = e.target.closest ? e.target.closest("[data-rail]") : null;
     if(item) openRailDetail(+item.getAttribute("data-rail"));
   });
-  vp.addEventListener("wheel", function(e){
-    if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){ vp.scrollLeft += e.deltaY; e.preventDefault(); }
-  }, {passive:false});
+  /* No vertical-wheel hijack: a mouse wheel / two-finger vertical swipe
+     scrolls the PAGE (so laptop users can reach the category sections
+     below the rail). Horizontal trackpad swipes still scroll the rail
+     natively (deltaX) — no handler needed. */
   vp.addEventListener("keydown", function(e){
     if((e.key === "Enter" || e.key === " ") && e.target.closest){
       var item = e.target.closest("[data-rail]");
@@ -1496,6 +1617,9 @@ function closeSearch(){
   var spinEl = byId("rdSpin");
   spinEl.addEventListener("pointerdown", function(e){
     if(!railDetail) return;
+    /* Same native-drag guard as the rail: a drag that begins on a
+       shirt photo must turn the ring, not start a browser image drag. */
+    e.preventDefault();
     spinDragging = true; spinMoved = 0;
     spinLastX = e.clientX; spinLastY = e.clientY; spinLastT = performance.now(); spinVel = 0;
     spinEl.classList.add("dragging");
@@ -1579,6 +1703,36 @@ function closeSearch(){
   });
   byId("searchClose").addEventListener("click", closeSearch);
   byId("searchOverlay").addEventListener("click", function(e){ if(e.target===this) closeSearch(); });
+})();
+
+/* Category sections below the rail: tap a piece to open it in the
+   detail view; "View all" opens the search overlay filtered to it. */
+(function(){
+  var host = byId("catSections"); if(!host) return;
+  host.addEventListener("click", function(e){
+    var v = e.target.closest ? e.target.closest("[data-cat-viewall]") : null;
+    if(v){
+      var cat = v.getAttribute("data-cat-viewall");
+      state.cat = cat;
+      var sel = byId("fCat");
+      if(sel){
+        if(!Array.prototype.some.call(sel.options, function(o){ return o.value === cat; })){
+          var opt = document.createElement("option"); opt.value = cat; opt.textContent = cat; sel.appendChild(opt);
+        }
+        sel.value = cat;
+      }
+      openSearch();
+      return;
+    }
+    var card = e.target.closest ? e.target.closest("[data-rail]") : null;
+    if(card) openRailDetail(+card.getAttribute("data-rail"));
+  });
+  host.addEventListener("keydown", function(e){
+    if((e.key === "Enter" || e.key === " ") && e.target.closest){
+      var card = e.target.closest("[data-rail]");
+      if(card){ e.preventDefault(); openRailDetail(+card.getAttribute("data-rail")); }
+    }
+  });
 })();
 
 window.addEventListener("resize", function(){
