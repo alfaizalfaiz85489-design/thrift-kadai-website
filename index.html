@@ -229,11 +229,12 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
 .rail-viewport.dragging{cursor:grabbing;scroll-snap-type:none}
 .rail-line{position:absolute;left:0;right:0;top:70px;height:3px;background:linear-gradient(90deg,#b9bfc5,#d7dbde 30%,#c3c9ce 70%,#b9bfc5);box-shadow:0 2px 4px rgba(20,20,20,.18);z-index:1}
 .rail-track{display:flex;gap:56px;align-items:flex-start;height:100%;padding:0 24px;transition:filter .45s ease,opacity .45s ease}
-.rail-item{flex:0 0 auto;width:min(210px,38vw);scroll-snap-align:center;padding-top:56px;position:relative;transition:transform .45s cubic-bezier(.4,0,.2,1),opacity .45s ease,filter .45s ease;transform-origin:top center;cursor:pointer}
+.rail-item{flex:0 0 auto;width:min(210px,38vw);scroll-snap-align:center;padding-top:56px;position:relative;transition:transform .45s cubic-bezier(.4,0,.2,1),opacity .45s ease,filter .45s ease;transform-origin:top center;cursor:pointer;transform:perspective(750px) rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg)) scale(var(--sc,1))}
 .rail-item:focus-visible{outline:2px solid var(--rail-ink);outline-offset:6px}
-.rail-item.is-centre{transform:scale(1.1)}
-.rail-item.is-near{opacity:.92;filter:blur(.5px)}
-.rail-item.is-far{opacity:.78;filter:blur(1.2px)}
+.rail-item.is-centre{--sc:1.1}
+.rail-item.tilting{transition-duration:.12s}
+.rail-item.is-near{opacity:.95;filter:blur(.5px)}
+.rail-item.is-far{opacity:.85;filter:blur(1px)}
 .rail-item .garment{transform-origin:top center;animation:sway 5s ease-in-out infinite}
 .rail-item.is-centre .garment{animation-duration:4s}
 @keyframes sway{0%,100%{transform:rotate(-1.1deg)}50%{transform:rotate(1.1deg)}}
@@ -243,7 +244,7 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
 .garment{position:relative;background:#fff;border:1px solid #e2e5e7;box-shadow:0 14px 30px -12px rgba(20,20,20,.25)}
 .garment img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
 .rail-sold{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-6deg);font-family:var(--cond);font-weight:600;font-size:20px;letter-spacing:.24em;color:#fff;border:2px solid #fff;padding:4px 12px;background:rgba(20,20,20,.45);white-space:nowrap}
-.rail-name{margin-top:12px;text-align:center;font-family:var(--cond);font-weight:500;font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--rail-muted)}
+.rail-name{margin-top:12px;text-align:center;font-family:var(--cond);font-weight:600;font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:#3f444a}
 .rail-fade{position:absolute;top:0;bottom:0;width:90px;pointer-events:none;z-index:2}
 .rail-fade-l{left:0;background:linear-gradient(90deg,var(--rail-bg2),transparent)}
 .rail-fade-r{right:0;background:linear-gradient(-90deg,var(--rail-bg2),transparent)}
@@ -252,9 +253,19 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
 /* enlarged garment (detail) */
 .rail-detail{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:linear-gradient(180deg,rgba(245,247,248,.88),rgba(237,240,242,.94));opacity:0;pointer-events:none;transition:opacity .35s ease;overflow-y:auto;padding:56px 16px 30px}
 .rail-detail.open{opacity:1;pointer-events:auto}
-.rail-detail-fig{position:relative;transform:scale(.86);transition:transform .45s cubic-bezier(.4,0,.2,1)}
+.rail-detail-fig{position:relative;transform:scale(.86);transform-style:preserve-3d;transition:transform .45s cubic-bezier(.4,0,.2,1)}
 .rail-detail.open .rail-detail-fig{transform:scale(1)}
-.rail-detail-fig img{height:min(38vh,380px);width:auto;max-width:86vw;object-fit:cover;background:#fff;border:1px solid #e2e5e7;box-shadow:0 24px 50px -18px rgba(20,20,20,.35);transition:opacity .18s ease;cursor:pointer}
+/* 3D spin stage — drag the shirt and it turns in 3D. The ring's faces
+   are the product's own photos only: photo 1 (the real front) faces you
+   at rest, and dragging rotates the ring to the next real photo. No
+   AI-generated images, no generated backdrops — the front stays the
+   real photo, exactly as the owner shot it. */
+.rd-spin{position:relative;height:min(38vh,380px);aspect-ratio:4/5;max-width:86vw;margin:0 auto;perspective:1000px;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.rd-spin.dragging{cursor:grabbing}
+.rd-spin-inner{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
+.rd-face{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#fff;border:1px solid #e2e5e7;box-shadow:0 24px 50px -18px rgba(20,20,20,.35);backface-visibility:hidden}
+.rd-spin-shadow{position:absolute;left:14%;right:14%;bottom:-20px;height:16px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(20,20,20,.28),transparent 70%);pointer-events:none}
+.rd-spin-hint{font-size:12.5px;color:var(--rail-muted);margin:6px 0 0;font-family:var(--cond);letter-spacing:.14em;text-transform:uppercase}
 .rail-close{position:absolute;top:14px;right:16px;z-index:6;border:0;background:none;font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.22em;color:var(--rail-ink);padding:10px;cursor:pointer}
 .rail-arrow{position:absolute;top:24%;z-index:6;width:48px;height:48px;border-radius:50%;border:1px solid #c7ccd1;background:#fff;color:var(--rail-ink);font-size:26px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 18px rgba(20,20,20,.14);cursor:pointer}
 .rail-prev{left:14px}
@@ -346,15 +357,19 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
       <button class="rail-close" id="railClose" aria-label="Close">CLOSE ✕</button>
       <button class="rail-arrow rail-prev" id="railPrev" aria-label="Previous piece">‹</button>
       <button class="rail-arrow rail-next" id="railNext" aria-label="Next piece">›</button>
-      <div class="rail-detail-fig">
+      <div class="rail-detail-fig" id="rdFig">
         <div class="hanger" aria-hidden="true"><i class="hook"></i><i class="bar"></i></div>
-        <img id="rdImg" src="assets/img-5-8cc2a4fb26cd.jpg" alt="" />
+        <div class="rd-spin" id="rdSpin">
+          <div class="rd-spin-inner" id="rdSpinInner"></div>
+          <div class="rd-spin-shadow" id="rdSpinShadow" aria-hidden="true"></div>
+        </div>
       </div>
       <div class="rail-detail-info">
         <h2 id="rdName"></h2>
         <p class="rd-price" id="rdPrice"></p>
         <div class="rd-dots" id="rdDots" role="group" aria-label="Photos"></div>
         <p class="rd-count" id="rdPhotoCount"></p>
+        <p class="rd-spin-hint" id="rdSpinHint">Drag the shirt to spin it in 3D</p>
         <div class="rd-sizes" id="rdSizes"></div>
         <button class="rd-select" id="rdSelect">SELECT A SIZE</button>
         <button class="rd-avail" id="rdAvail">SEE AVAILABILITY</button>
@@ -1152,6 +1167,15 @@ firestoreCategories().then(function(cats){
 
 /* ---------- virtual clothing rail (homepage, from the @w.wearebrand reel) ---------- */
 var railIdx = 0, railDetail = null, railDetailPhoto = 0, railDetailSize = null, railPlaced = false;
+/* 3D spin state — drag the shirt in the detail view to turn it.
+   spinAngle is the ring's rotation in degrees; the photo facing front
+   is the one whose sector contains the angle. */
+var spinAngle = 0, spinVel = 0, spinRaf = null, spinDragging = false, spinMoved = 0, spinLastX = 0, spinLastY = 0, spinLastT = 0, spinTiltX = 0;
+var REDUCED = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
+function setRailCounter(i){
+  var p = PRODUCTS[i];
+  byId("railCount").textContent = String(i+1).padStart(2,"0") + " / " + String(PRODUCTS.length).padStart(2,"0") + " — " + (p ? p.name.toUpperCase() : "");
+}
 function renderRail(){
   var track = byId("railTrack"); if(!track) return;
   if(!LIVE_CATALOG){
@@ -1227,8 +1251,7 @@ function updateRailCentre(){
     el.classList.toggle("is-far", d >= 0.22);
   });
   var i = railCentreIndex();
-  var p = PRODUCTS[i];
-  byId("railCount").textContent = String(i+1).padStart(2,"0") + " / " + String(PRODUCTS.length).padStart(2,"0") + " — " + (p ? p.name.toUpperCase() : "");
+  setRailCounter(i);
   railIdx = i;
 }
 function scrollRailTo(i, smooth){
@@ -1251,13 +1274,17 @@ function snapRail(){
 function openRailDetail(id){
   var p = prod(id); if(!p) return;
   railDetail = p; railDetailPhoto = 0; railDetailSize = null;
+  spinAngle = 0; spinTiltX = 0;
+  var idx = PRODUCTS.indexOf(p);
+  if(idx >= 0){ railIdx = idx; setRailCounter(idx); }
   renderRailDetail();
   byId("railStage").classList.add("detail-open");
   var d = byId("railDetail");
   d.hidden = false;
-  requestAnimationFrame(function(){ d.classList.add("open"); });
+  requestAnimationFrame(function(){ d.classList.add("open"); buildSpinFaces(); applySpin(); });
 }
 function closeRailDetail(){
+  cancelAnimationFrame(spinRaf); spinRaf = null; spinDragging = false;
   var d = byId("railDetail"); if(!d) return;
   d.classList.remove("open");
   byId("railStage").classList.remove("detail-open");
@@ -1269,8 +1296,6 @@ function renderRailDetail(){
   var imgs = prodImages(p);
   var idx = Math.min(railDetailPhoto, imgs.length - 1);
   railDetailPhoto = idx;
-  var img = byId("rdImg");
-  img.src = imgs[idx]; img.alt = p.alt;
   byId("rdName").textContent = p.name;
   byId("rdPrice").textContent = money(p.price) + (p.mrp > p.price ? "  ·  MRP " + money(p.mrp) : "");
   var dots = byId("rdDots");
@@ -1278,13 +1303,92 @@ function renderRailDetail(){
     return '<button class="rd-dot'+(i===idx?" on":"")+'" data-photo="'+i+'" aria-label="Photo '+(i+1)+' of '+imgs.length+'"></button>';
   }).join("");
   dots.style.display = imgs.length > 1 ? "" : "none";
-  byId("rdPhotoCount").textContent = imgs.length > 1 ? ("Photo " + (idx + 1) + " of " + imgs.length + " — tap the photo for the next") : "";
+  buildSpinFaces();
+  setSpinPhoto(idx, false, 0);
   byId("rdSizes").innerHTML = p.sizes.map(function(s){
     var q = sizeQty(p, s), out = q === 0;
     return '<button class="rd-size'+(out?" out":"")+(railDetailSize===s?" on":"")+'" data-size="'+s+'" '+(out?"disabled":"")+'>'+s+' ('+q+')</button>';
   }).join("");
   syncRdSelect();
   byId("rdAvailPanel").hidden = true;
+}
+/* ---------- 3D spin: the product's photos arranged as faces of a ring.
+   Photo 1 (the real front) faces you at rest (angle 0). Dragging turns
+   the ring; on release it snaps to the nearest face, or rests on the
+   back view if spun right around. Photos are the owner's own uploads
+   only — nothing is generated. ---------- */
+function spinRadius(){
+  var p = railDetail; if(!p) return 0;
+  var n = prodImages(p).length;
+  if(n < 3) return 0;
+  var w = byId("rdSpin") ? byId("rdSpin").clientWidth : 0;
+  if(!w) return 0;
+  return (w / 2) / Math.tan(Math.PI / n);
+}
+function spinFrontIndex(){
+  var p = railDetail; if(!p) return 0;
+  var n = prodImages(p).length;
+  if(n < 2) return 0;
+  var s = 360 / n;
+  /* Sign matters: turning the ring by +angle brings the face that was
+     at -angle to the front, so the facing photo is round(-angle/step). */
+  var k = Math.round(-spinAngle / s) % n;
+  return (k + n) % n;
+}
+function buildSpinFaces(){
+  var p = railDetail; if(!p) return;
+  var imgs = prodImages(p);
+  var inner = byId("rdSpinInner"); if(!inner) return;
+  var n = imgs.length, r = spinRadius();
+  inner.innerHTML = imgs.map(function(u, i){
+    return '<img class="rd-face" src="' + u + '" alt="' + p.alt + '" draggable="false" style="transform:rotateY(' + (i * (360 / n)) + 'deg) translateZ(' + r.toFixed(1) + 'px)" />';
+  }).join("");
+}
+function applySpin(){
+  var inner = byId("rdSpinInner"); if(!inner || !railDetail) return;
+  inner.style.transform = "rotateX(" + spinTiltX.toFixed(1) + "deg) rotateY(" + spinAngle.toFixed(1) + "deg)";
+  var sh = byId("rdSpinShadow");
+  if(sh){
+    var f = (spinAngle % 360) * Math.PI / 180;
+    sh.style.transform = "scaleX(" + (0.55 + 0.45 * Math.abs(Math.cos(f))).toFixed(2) + ")";
+  }
+}
+/* Turn the ring so photo idx faces front. dir: 0 = nearest equivalent
+   angle, 1 = the next one forward, -1 = the next one back. */
+function setSpinPhoto(idx, animate, dir){
+  var p = railDetail; if(!p) return;
+  var n = prodImages(p).length;
+  if(n < 2){ spinAngle = 0; spinTiltX = 0; applySpin(); railDetailPhoto = 0; syncSpinUI(); return; }
+  var s = 360 / n;
+  idx = ((idx % n) + n) % n;
+  /* Photo idx faces front when the ring sits at angle -idx*step (mod
+     360): turning the ring by +angle brings the face from -angle. */
+  var target = -idx * s, k;
+  if(dir > 0){ k = Math.floor((spinAngle - target) / 360) + 1; target += k * 360; if(target <= spinAngle) target += 360; }
+  else if(dir < 0){ k = Math.ceil((spinAngle - target) / 360) - 1; target += k * 360; if(target >= spinAngle) target -= 360; }
+  else { k = Math.round((spinAngle - target) / 360); target += k * 360; }
+  var inner = byId("rdSpinInner");
+  if(animate && !REDUCED && inner){
+    inner.style.transition = "transform .45s cubic-bezier(.4,0,.2,1)";
+    spinAngle = target; applySpin();
+    setTimeout(function(){ if(inner) inner.style.transition = ""; }, 480);
+  } else {
+    if(inner) inner.style.transition = "";
+    spinAngle = target; applySpin();
+  }
+  railDetailPhoto = idx;
+  syncSpinUI();
+}
+/* Dots + "Photo N of M" follow whichever photo faces front. */
+function syncSpinUI(){
+  var p = railDetail; if(!p) return;
+  var imgs = prodImages(p);
+  var idx = spinFrontIndex();
+  railDetailPhoto = idx;
+  var dots = byId("rdDots");
+  if(dots) dots.querySelectorAll(".rd-dot").forEach(function(d, i){ d.classList.toggle("on", i === idx); });
+  byId("rdPhotoCount").textContent = imgs.length > 1 ? ("Photo " + (idx + 1) + " of " + imgs.length) : "";
+  byId("rdSpinHint").style.display = imgs.length > 1 ? "" : "none";
 }
 function syncRdSelect(){
   var p = railDetail; if(!p) return;
@@ -1297,10 +1401,12 @@ function railStep(d){
   var idx = list.indexOf(railDetail);
   idx = (idx + d + list.length) % list.length;
   railDetail = list[idx]; railDetailPhoto = 0; railDetailSize = null;
-  var img = byId("rdImg");
-  img.style.opacity = 0;
-  setTimeout(function(){ renderRailDetail(); img.style.opacity = 1; }, 160);
+  spinAngle = 0; spinTiltX = 0;
+  var fig = byId("rdFig");
+  fig.style.opacity = 0;
+  setTimeout(function(){ renderRailDetail(); fig.style.opacity = 1; }, 160);
   railIdx = idx;
+  setRailCounter(idx);
   scrollRailTo(idx, false);
 }
 /* search overlay (full catalog) */
@@ -1355,24 +1461,94 @@ function closeSearch(){
       if(item){ e.preventDefault(); openRailDetail(+item.getAttribute("data-rail")); }
     }
   });
+  /* Pointer-driven 3D tilt on rail garments — the piece leans toward
+     the pointer for depth. Mouse only; touch users drag the rail. */
+  var tiltEl = null;
+  vp.addEventListener("pointermove", function(e){
+    if(REDUCED || e.pointerType === "touch") return;
+    var item = e.target.closest ? e.target.closest(".rail-item") : null;
+    if(item !== tiltEl){
+      if(tiltEl){ tiltEl.classList.remove("tilting"); tiltEl.style.removeProperty("--tx"); tiltEl.style.removeProperty("--ty"); }
+      tiltEl = item;
+    }
+    if(!tiltEl) return;
+    var r = tiltEl.getBoundingClientRect();
+    var nx = (e.clientX - r.left) / r.width - 0.5;
+    var ny = (e.clientY - r.top) / r.height - 0.5;
+    tiltEl.classList.add("tilting");
+    tiltEl.style.setProperty("--ty", (nx * 10).toFixed(1) + "deg");
+    tiltEl.style.setProperty("--tx", (-ny * 8).toFixed(1) + "deg");
+  });
+  vp.addEventListener("pointerleave", function(){
+    if(tiltEl){ tiltEl.classList.remove("tilting"); tiltEl.style.removeProperty("--tx"); tiltEl.style.removeProperty("--ty"); tiltEl = null; }
+  });
   byId("railClose").addEventListener("click", closeRailDetail);
   byId("railPrev").addEventListener("click", function(){ railStep(-1); });
   byId("railNext").addEventListener("click", function(){ railStep(1); });
-  /* Photo browser: dots switch between the owner's photos; tapping the
-     photo advances to the next one. No FRONT/BACK labels — the owner
+  /* Photo browser: dots spin the ring to that photo; dragging the
+     shirt turns it in 3D through the owner's own photos. A tap (no
+     drag) advances one photo. No FRONT/BACK labels — the owner
      uploads front angles only, so no photo is a "back" view. */
   byId("rdDots").addEventListener("click", function(e){
     var b = e.target.closest("[data-photo]"); if(!b) return;
-    railDetailPhoto = +b.getAttribute("data-photo");
-    renderRailDetail();
+    setSpinPhoto(+b.getAttribute("data-photo"), true, 0);
   });
-  byId("rdImg").addEventListener("click", function(){
+  var spinEl = byId("rdSpin");
+  spinEl.addEventListener("pointerdown", function(e){
     if(!railDetail) return;
-    var imgs = prodImages(railDetail);
-    if(imgs.length < 2) return;
-    railDetailPhoto = (railDetailPhoto + 1) % imgs.length;
-    renderRailDetail();
+    spinDragging = true; spinMoved = 0;
+    spinLastX = e.clientX; spinLastY = e.clientY; spinLastT = performance.now(); spinVel = 0;
+    spinEl.classList.add("dragging");
+    try{ spinEl.setPointerCapture(e.pointerId); }catch(err){}
+    var inner = byId("rdSpinInner"); if(inner) inner.style.transition = "";
+    cancelAnimationFrame(spinRaf); spinRaf = null;
   });
+  spinEl.addEventListener("pointermove", function(e){
+    if(!spinDragging || !railDetail) return;
+    var dx = e.clientX - spinLastX, dy = e.clientY - spinLastY;
+    spinLastX = e.clientX; spinLastY = e.clientY;
+    var now = performance.now(), dt = Math.max(1, now - spinLastT); spinLastT = now;
+    spinVel = dx / dt;
+    spinMoved += Math.abs(dx) + Math.abs(dy);
+    var n = prodImages(railDetail).length;
+    if(n > 1) spinAngle += dx * 0.4;
+    spinTiltX = Math.max(-8, Math.min(8, spinTiltX + dy * 0.02));
+    applySpin();
+    syncSpinUI();
+  });
+  function spinEnd(){
+    if(!spinDragging) return;
+    spinDragging = false;
+    spinEl.classList.remove("dragging");
+    var p = railDetail; if(!p) return;
+    var n = prodImages(p).length;
+    if(spinMoved < 6){
+      /* tap: advance one photo forward (the ring turns one step back,
+         which brings the next photo to the front) */
+      spinTiltX = 0;
+      if(n > 1) setSpinPhoto(spinFrontIndex() + 1, true, -1);
+      else applySpin();
+      return;
+    }
+    if(n < 2 || REDUCED){
+      /* no inertia: settle on the nearest face (front if near front) */
+      spinTiltX = 0; spinAngle = 0; applySpin(); syncSpinUI();
+      return;
+    }
+    /* inertia: keep turning with decaying speed, then snap to a face */
+    var v = spinVel * 0.4 * 16;
+    var step = function(){
+      v *= 0.94;
+      spinAngle += v;
+      spinTiltX *= 0.9;
+      applySpin(); syncSpinUI();
+      if(Math.abs(v) > 0.6){ spinRaf = requestAnimationFrame(step); }
+      else { spinTiltX = 0; setSpinPhoto(spinFrontIndex(), true, 0); }
+    };
+    spinRaf = requestAnimationFrame(step);
+  }
+  spinEl.addEventListener("pointerup", spinEnd);
+  spinEl.addEventListener("pointercancel", spinEnd);
   byId("rdSizes").addEventListener("click", function(e){
     var b = e.target.closest("[data-size]"); if(!b || b.disabled) return;
     railDetailSize = b.getAttribute("data-size");
@@ -1407,7 +1583,7 @@ function closeSearch(){
 
 window.addEventListener("resize", function(){
   clearTimeout(window._railRsT);
-  window._railRsT = setTimeout(function(){ if(LIVE_CATALOG){ layoutRail(); updateRailCentre(); } }, 150);
+  window._railRsT = setTimeout(function(){ if(LIVE_CATALOG){ layoutRail(); updateRailCentre(); } if(railDetail){ buildSpinFaces(); applySpin(); } }, 150);
 });
 
 renderRail();
