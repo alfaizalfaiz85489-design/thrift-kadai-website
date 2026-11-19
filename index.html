@@ -113,23 +113,47 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
 .reach-ic svg{display:block}
 .foot-bottom{border-top:1px solid #2e2a27;padding:16px 20px;text-align:center;font-size:12.5px;color:#a8a29e;max-width:1280px;margin:0 auto}
 
-/* cart drawer */
+/* ---------- buttons (cart, quick view, address) ----------
+   NOTE: these had no styles at all before 2026-11-19 — the buttons
+   rendered as plain browser-default buttons, which is a big part of
+   why the cart looked unprofessional. */
+.btn{display:inline-flex;align-items:center;border:0;border-radius:12px;padding:14px 20px;font-weight:800;font-size:14.5px;letter-spacing:.02em;text-decoration:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-dark{background:var(--ink);color:#fff}
+.btn-dark:hover{background:#000}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{background:var(--accent-hover)}
+.btn-outline{background:var(--bg);color:var(--ink);border:1.5px solid var(--line)}
+.btn-outline:hover{border-color:var(--ink)}
+
+/* cart drawer — professional store-cart look (2026-11-19, owner:
+   "This is not like professional"). Same function as before: item
+   rows with photo/name/size/qty stepper/remove, subtotal, shipping
+   note, policy note, checkout + continue-shopping buttons. Only the
+   look changed: item-count header, white item cards, a summary box,
+   a prominent checkout button, a secure-payment line. */
 .cart-drawer{position:fixed;top:0;right:0;bottom:0;width:min(400px,92vw);background:var(--bg);color:var(--ink);z-index:95;transform:translateX(105%);transition:transform .32s ease;display:flex;flex-direction:column;box-shadow:var(--shadow)}
 .cart-drawer.open{transform:none}
-.cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
+.cart-head{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 20px 16px;border-bottom:1px solid var(--line)}
 .cart-head h3{margin:0;font-family:var(--serif);font-weight:600;font-size:24px;letter-spacing:0}
-.cart-items{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
-.cart-item{display:flex;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px}
-.cart-item img{width:64px;height:80px;object-fit:cover;border-radius:8px}
+.cart-head-count{display:block;font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.cart-items{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.cart-item{display:flex;gap:12px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;box-shadow:0 2px 10px rgba(28,25,23,.05)}
+.cart-item img{width:72px;height:88px;object-fit:cover;border-radius:8px}
 .cart-item .ci-name{font-weight:700;font-size:14px;line-height:1.3}
 .cart-item .ci-meta{font-size:12.5px;color:var(--muted);margin-top:2px}
 
 .ci-right{margin-left:auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end}
 .ci-remove{background:none;border:0;color:var(--danger);font-size:12px;font-weight:800;margin-top:auto;padding:0}
-.cart-foot{border-top:1px solid var(--line);padding:18px 20px}
+.cart-foot{border-top:1px solid var(--line);padding:20px;background:#fff}
+.cart-summary{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.cart-summary .ship-note{margin:8px 0 0}
 .subtotal{display:flex;justify-content:space-between;font-weight:800;font-size:16px;margin-bottom:6px}
 .ship-note{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
-.cart-foot .btn{width:100%;justify-content:center;margin-top:8px}
+.cart-foot .btn{width:100%;justify-content:center;margin-top:10px;padding:15px 20px;font-size:15px}
+.cart-foot .btn-outline{padding:12px 20px;font-size:14px}
+.cart-foot .policy-note{margin-top:0}
+.secure-line{text-align:center;font-size:12.5px;color:var(--muted);margin:14px 0 0;line-height:1.5}
 
 .upi-box{display:flex;gap:12px;border:1.5px dashed var(--line);border-radius:12px;padding:12px;margin-top:14px;align-items:center;text-align:left}
 .upi-qr{width:64px;height:64px;flex:0 0 64px;border:2px solid var(--ink);border-radius:8px;display:grid;place-items:center;text-align:center;font-weight:800;font-size:11px;letter-spacing:.08em;line-height:1.35}
@@ -205,7 +229,22 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
   .sticky-bar a,.sticky-bar button{background:none;border:0;color:#fff;text-decoration:none;font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:14px 4px 16px;text-align:center;position:relative}
   .hero-dots{right:auto;left:20px}
 }
-#qvImg{cursor:grab;touch-action:pan-y}
+/* ---------- quick view: 3D spin photo viewer ----------
+   The rail's spin ring lives inside Quick View now (2026-11-19):
+   a tap on the rail opens Quick View straight away, and the shirt
+   still spins in 3D here — drag it, tap it, use the ‹ › arrows, or
+   tap a thumbnail below. Photo 1 (the real front) faces you at rest.
+   Thumbnails are always visible below the photo, never hidden behind
+   a click. */
+.qv-spin-wrap{position:relative;width:100%;padding:14px 0 0}
+.modal-media .rd-spin{height:min(36vh,360px)}
+.qv-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:6;width:44px;height:44px;border-radius:50%;border:1px solid #c7ccd1;background:rgba(255,255,255,.96);color:#111;font-size:26px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 18px rgba(20,20,20,.16);cursor:pointer;padding:0 0 2px}
+.qv-arrow:hover{background:#fff}
+.qv-prev{left:12px}
+.qv-next{right:12px}
+.modal-media .rd-count,.modal-media .rd-spin-hint{text-align:center}
+.qv-thumbs{justify-content:center}
+.qv-thumbs img{width:64px;height:64px}
 .qty{display:inline-flex;align-items:center;gap:2px;border:1.5px solid var(--line);border-radius:10px;padding:2px}
 [hidden]{display:none!important}
 .qty>button{width:38px;height:38px;border:0;background:none;font-weight:800;font-size:18px;color:var(--ink);cursor:pointer}
@@ -375,6 +414,10 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
       <div class="rail-fade rail-fade-r" aria-hidden="true"></div>
     </div>
     <p class="rail-count" id="railCount">LOADING THE RACK…</p>
+    <!-- RETIRED as a click target (2026-11-19, owner feedback): a tap on
+         the rail now opens Quick View, which carries the 3D spin. This
+         overlay + its JS are kept so closeAll()/resize references stay
+         valid — nothing opens it any more. -->
     <div class="rail-detail" id="railDetail" hidden>
       <button class="rail-close" id="railClose" aria-label="Close">CLOSE ✕</button>
       <button class="rail-arrow rail-prev" id="railPrev" aria-label="Previous piece">‹</button>
@@ -459,18 +502,21 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
 
 <!-- CART -->
 <aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
-  <div class="cart-head"><h3>Your cart</h3>
+  <div class="cart-head"><div><h3>Your cart</h3><span class="cart-head-count" id="cartHeadCount"></span></div>
     <button class="icon-btn" id="cartClose" aria-label="Close cart" style="color:var(--ink)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="21"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
   </div>
   <div class="cart-items" id="cartItems"></div>
   <div class="cart-foot">
-    <div class="subtotal"><span>Subtotal</span><span id="cartTotal">₹0</span></div>
-    <p class="ship-note">Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — added at checkout. Pay online securely at checkout — UPI, cards, net banking and wallets.</p>
+    <div class="cart-summary">
+      <div class="subtotal"><span>Subtotal</span><span id="cartTotal">₹0</span></div>
+      <p class="ship-note">Shipping is ₹60 within Tamil Nadu and ₹120 outside Tamil Nadu — added at checkout.</p>
+    </div>
     <div class="policy-note">No exchange · No return · No refund — please check the size, price and all details carefully before you order.</div>
     <button class="btn btn-accent" id="checkoutBtn">Continue to delivery details</button>
     <button class="btn btn-outline" id="continueBtn">Continue shopping</button>
+    <p class="secure-line">🔒 Secure payment — UPI, cards, net banking &amp; wallets</p>
     <!-- PAYMENT: Razorpay is live (owner's account, website verified).
          checkout.js opens the Razorpay payment popup at checkout. -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -484,7 +530,20 @@ footer p{color:#a8a29e;font-size:14.5px;line-height:1.7;margin:0}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="19"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
     <div class="modal-grid">
-      <div class="modal-media"><img id="qvImg" src="assets/img-5-8cc2a4fb26cd.jpg" alt="" /><span class="badge sale" id="qvBadge"></span><div class="qv-thumbs" id="qvThumbs"></div></div>
+      <div class="modal-media">
+        <div class="qv-spin-wrap">
+          <div class="rd-spin" id="qvSpin">
+            <div class="rd-spin-inner" id="qvSpinInner"></div>
+            <div class="rd-spin-shadow" id="qvSpinShadow" aria-hidden="true"></div>
+          </div>
+          <button class="qv-arrow qv-prev" id="qvPrev" aria-label="Previous photo">‹</button>
+          <button class="qv-arrow qv-next" id="qvNext" aria-label="Next photo">›</button>
+        </div>
+        <span class="badge sale" id="qvBadge"></span>
+        <p class="rd-count" id="qvPhotoCount"></p>
+        <p class="rd-spin-hint" id="qvSpinHint">Drag the shirt to spin it in 3D</p>
+        <div class="qv-thumbs" id="qvThumbs"></div>
+      </div>
       <div class="modal-body">
         <div class="card-cat" id="qvCat"></div>
         <h3 id="qvName"></h3>
@@ -670,6 +729,7 @@ function closeAll(){
   byId("cartDrawer").classList.remove("open");
   byId("scrim").classList.remove("on");
   byId("qvModal").classList.remove("open");
+  if(typeof spinProd !== "undefined") spinProd = null;
   byId("addrModal").classList.remove("open");
   if(typeof closeSearch === "function") closeSearch();
   if(typeof railDetail !== "undefined" && railDetail) closeRailDetail();
@@ -770,6 +830,8 @@ function renderCart(){
   }
   var total = cart.reduce(function(s,c){ return s + prod(c.id).price*c.qty; }, 0);
   byId("cartTotal").textContent = money(total);
+  var hc = byId("cartHeadCount");
+  if(hc){ var n = cartCount(); hc.textContent = n ? (n + (n === 1 ? " item" : " items")) : ""; }
   syncCounts();
 }
 function addToCart(id, size, qty){
@@ -828,7 +890,6 @@ function deliveryText(){
 function openQV(id){
   var p = prod(id); if(!p) return;
   qv = { id:id, size:null, qty:1, img:0 };
-  byId("qvImg").src = mainImg(p); byId("qvImg").alt = p.alt;
   var qvImgs = prodImages(p);
   byId("qvThumbs").innerHTML = qvImgs.map(function(u, i){
     return '<img src="'+u+'" alt="" data-qvthumb="'+i+'" class="'+(i===0?"on":"")+'" />';
@@ -856,9 +917,15 @@ function openQV(id){
     return '<button class="also-item" data-qv="'+x.id+'"><img src="'+mainImg(x)+'" alt="'+x.alt+'" loading="lazy" /><div><div class="an">'+x.name+'</div><div class="ap">'+money(x.price)+(x.stock===0?' · Sold out':'')+'</div></div></button>';
   }).join("");
   byId("qvModal").classList.add("open");
+  /* Spin viewer: the rail's 3D ring, now inside Quick View. The modal
+     must be open first — the ring's radius is measured from the
+     visible stage, so building it while hidden would give radius 0.
+     Photo 1 (the real front) faces you at rest. */
+  spinProd = p; spinAngle = 0; spinTiltX = 0;
+  buildSpinFaces(); applySpin(); syncSpinUI();
 }
-byId("qvClose").addEventListener("click", function(){ byId("qvModal").classList.remove("open"); });
-byId("qvModal").addEventListener("click", function(e){ if(e.target===this) this.classList.remove("open"); });
+byId("qvClose").addEventListener("click", function(){ byId("qvModal").classList.remove("open"); spinProd = null; });
+byId("qvModal").addEventListener("click", function(e){ if(e.target===this){ this.classList.remove("open"); spinProd = null; } });
 byId("qvSizes").addEventListener("click", function(e){
   var b = e.target.closest("[data-size]"); if(!b || b.disabled) return;
   qv.size = b.getAttribute("data-size");
@@ -881,37 +948,24 @@ function syncQVQty(){
 }
 byId("qvMinus").addEventListener("click", function(){ if(qv.qty > 1){ qv.qty--; syncQVQty(); } });
 byId("qvPlus").addEventListener("click", function(){ var p = prod(qv.id); var max = qv.size && p ? sizeQty(p, qv.size) : 0; if(qv.qty < max){ qv.qty++; syncQVQty(); } });
-/* One photo-switcher for taps and swipes: shows photo i (wraps around)
-   and moves the thumbnail highlight with it. */
-function qvImgCount(){ var p = prod(qv.id); return p ? prodImages(p).length : 0; }
+/* One photo-switcher for thumbs and arrows: turns the 3D ring so
+   photo i faces front (wraps around) and moves the thumbnail
+   highlight with it. The old swipe-on-a-single-img handler is gone —
+   dragging the ring itself is the swipe now (see the spin handlers). */
 function showQVImg(i){
   var p = prod(qv.id); if(!p) return;
-  var imgs = prodImages(p); if(!imgs.length) return;
-  qv.img = ((i % imgs.length) + imgs.length) % imgs.length;
-  byId("qvImg").src = imgs[qv.img];
-  byId("qvThumbs").querySelectorAll("img").forEach(function(x, j){ x.classList.toggle("on", j===qv.img); });
+  if(prodImages(p).length < 2) return;
+  setSpinPhoto(i, true, 0);
 }
 byId("qvThumbs").addEventListener("click", function(e){
   var t = e.target.closest("[data-qvthumb]"); if(!t) return;
   showQVImg(+t.getAttribute("data-qvthumb"));
 });
-/* Swipe the main photo: finger swipe on a phone, or mouse drag on a
-   computer — left = next photo, right = previous photo. Only a mostly
-   horizontal move counts, so scrolling up and down still works. */
-(function(){
-  var img = byId("qvImg");
-  var startX = 0, startY = 0, dragging = false;
-  img.addEventListener("dragstart", function(e){ e.preventDefault(); });
-  function swipe(dx, dy){
-    if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) && qvImgCount() > 1){
-      showQVImg(qv.img + (dx < 0 ? 1 : -1));
-    }
-  }
-  img.addEventListener("touchstart", function(e){ var t = e.changedTouches[0]; startX = t.clientX; startY = t.clientY; }, {passive:true});
-  img.addEventListener("touchend", function(e){ var t = e.changedTouches[0]; swipe(t.clientX - startX, t.clientY - startY); }, {passive:true});
-  img.addEventListener("mousedown", function(e){ dragging = true; startX = e.clientX; startY = e.clientY; });
-  img.addEventListener("mouseup", function(e){ if(!dragging) return; dragging = false; swipe(e.clientX - startX, e.clientY - startY); });
-})();
+/* ‹ › arrows on the main photo: step one photo back / forward. The
+   ring turns one step back to bring the NEXT photo to the front, and
+   one step forward to bring the PREVIOUS photo to the front. */
+byId("qvPrev").addEventListener("click", function(){ if(spinProd) setSpinPhoto(spinFrontIndex() - 1, true, 1); });
+byId("qvNext").addEventListener("click", function(){ if(spinProd) setSpinPhoto(spinFrontIndex() + 1, true, -1); });
 byId("qvAdd").addEventListener("click", function(){
   if(!qv.size){ toast("Please select a size first"); return; }
   addToCart(qv.id, qv.size, qv.qty);
@@ -1085,7 +1139,7 @@ function rerenderAll(){
    live catalog (CATS order first, then any other product category).
    Never renders while the live catalog is still loading, never shows
    an empty category, never uses sample products. Tapping a piece
-   opens the same detail view as the rail; "View all" opens the
+   opens Quick View; "View all" opens the
    search overlay filtered to that category. */
 function renderCatSections(){
   var host = byId("catSections"); if(!host) return;
@@ -1229,6 +1283,10 @@ var railIdx = 0, railDetail = null, railDetailPhoto = 0, railDetailSize = null, 
    spinAngle is the ring's rotation in degrees; the photo facing front
    is the one whose sector contains the angle. */
 var spinAngle = 0, spinVel = 0, spinRaf = null, spinDragging = false, spinMoved = 0, spinLastX = 0, spinLastY = 0, spinLastT = 0, spinTiltX = 0;
+/* Which product the 3D ring is showing. Since 2026-11-19 this is the
+   product open in Quick View (spinProd), not the retired rail detail
+   view — openQV sets it, closing Quick View clears it. */
+var spinProd = null;
 var REDUCED = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
 function setRailCounter(i){
   var p = PRODUCTS[i];
@@ -1341,7 +1399,9 @@ function snapRail(){
   });
   if(best) vp.scrollTo({left: best.offsetLeft + best.offsetWidth / 2 - vp.clientWidth / 2, behavior:"smooth"});
 }
-/* enlarged garment view */
+/* enlarged garment view — RETIRED as a click target (2026-11-19):
+   rail taps now open Quick View, which carries the 3D spin. Kept so
+   closeAll()/resize and the rail's pointer guards keep working. */
 function openRailDetail(id){
   var p = prod(id); if(!p) return;
   railDetail = p; railDetailPhoto = 0; railDetailSize = null;
@@ -1387,17 +1447,18 @@ function renderRailDetail(){
    Photo 1 (the real front) faces you at rest (angle 0). Dragging turns
    the ring; on release it snaps to the nearest face, or rests on the
    back view if spun right around. Photos are the owner's own uploads
-   only — nothing is generated. ---------- */
+   only — nothing is generated. Since 2026-11-19 the ring lives in
+   Quick View (#qvSpin), not the retired rail detail view. ---------- */
 function spinRadius(){
-  var p = railDetail; if(!p) return 0;
+  var p = spinProd; if(!p) return 0;
   var n = prodImages(p).length;
   if(n < 3) return 0;
-  var w = byId("rdSpin") ? byId("rdSpin").clientWidth : 0;
+  var w = byId("qvSpin") ? byId("qvSpin").clientWidth : 0;
   if(!w) return 0;
   return (w / 2) / Math.tan(Math.PI / n);
 }
 function spinFrontIndex(){
-  var p = railDetail; if(!p) return 0;
+  var p = spinProd; if(!p) return 0;
   var n = prodImages(p).length;
   if(n < 2) return 0;
   var s = 360 / n;
@@ -1407,18 +1468,18 @@ function spinFrontIndex(){
   return (k + n) % n;
 }
 function buildSpinFaces(){
-  var p = railDetail; if(!p) return;
+  var p = spinProd; if(!p) return;
   var imgs = prodImages(p);
-  var inner = byId("rdSpinInner"); if(!inner) return;
+  var inner = byId("qvSpinInner"); if(!inner) return;
   var n = imgs.length, r = spinRadius();
   inner.innerHTML = imgs.map(function(u, i){
     return '<img class="rd-face" src="' + u + '" alt="' + p.alt + '" draggable="false" style="transform:rotateY(' + (i * (360 / n)) + 'deg) translateZ(' + r.toFixed(1) + 'px)" />';
   }).join("");
 }
 function applySpin(){
-  var inner = byId("rdSpinInner"); if(!inner || !railDetail) return;
+  var inner = byId("qvSpinInner"); if(!inner || !spinProd) return;
   inner.style.transform = "rotateX(" + spinTiltX.toFixed(1) + "deg) rotateY(" + spinAngle.toFixed(1) + "deg)";
-  var sh = byId("rdSpinShadow");
+  var sh = byId("qvSpinShadow");
   if(sh){
     var f = (spinAngle % 360) * Math.PI / 180;
     sh.style.transform = "scaleX(" + (0.55 + 0.45 * Math.abs(Math.cos(f))).toFixed(2) + ")";
@@ -1427,9 +1488,9 @@ function applySpin(){
 /* Turn the ring so photo idx faces front. dir: 0 = nearest equivalent
    angle, 1 = the next one forward, -1 = the next one back. */
 function setSpinPhoto(idx, animate, dir){
-  var p = railDetail; if(!p) return;
+  var p = spinProd; if(!p) return;
   var n = prodImages(p).length;
-  if(n < 2){ spinAngle = 0; spinTiltX = 0; applySpin(); railDetailPhoto = 0; syncSpinUI(); return; }
+  if(n < 2){ spinAngle = 0; spinTiltX = 0; applySpin(); qv.img = 0; syncSpinUI(); return; }
   var s = 360 / n;
   idx = ((idx % n) + n) % n;
   /* Photo idx faces front when the ring sits at angle -idx*step (mod
@@ -1438,7 +1499,7 @@ function setSpinPhoto(idx, animate, dir){
   if(dir > 0){ k = Math.floor((spinAngle - target) / 360) + 1; target += k * 360; if(target <= spinAngle) target += 360; }
   else if(dir < 0){ k = Math.ceil((spinAngle - target) / 360) - 1; target += k * 360; if(target >= spinAngle) target -= 360; }
   else { k = Math.round((spinAngle - target) / 360); target += k * 360; }
-  var inner = byId("rdSpinInner");
+  var inner = byId("qvSpinInner");
   if(animate && !REDUCED && inner){
     inner.style.transition = "transform .45s cubic-bezier(.4,0,.2,1)";
     spinAngle = target; applySpin();
@@ -1447,19 +1508,26 @@ function setSpinPhoto(idx, animate, dir){
     if(inner) inner.style.transition = "";
     spinAngle = target; applySpin();
   }
-  railDetailPhoto = idx;
+  qv.img = idx;
   syncSpinUI();
 }
-/* Dots + "Photo N of M" follow whichever photo faces front. */
+/* Thumbnails + "Photo N of M" + arrows follow whichever photo faces
+   front. */
 function syncSpinUI(){
-  var p = railDetail; if(!p) return;
+  var p = spinProd; if(!p) return;
   var imgs = prodImages(p);
   var idx = spinFrontIndex();
-  railDetailPhoto = idx;
-  var dots = byId("rdDots");
-  if(dots) dots.querySelectorAll(".rd-dot").forEach(function(d, i){ d.classList.toggle("on", i === idx); });
-  byId("rdPhotoCount").textContent = imgs.length > 1 ? ("Photo " + (idx + 1) + " of " + imgs.length) : "";
-  byId("rdSpinHint").style.display = imgs.length > 1 ? "" : "none";
+  qv.img = idx;
+  var thumbs = byId("qvThumbs");
+  if(thumbs) thumbs.querySelectorAll("img").forEach(function(x, j){ x.classList.toggle("on", j === idx); });
+  var pc = byId("qvPhotoCount");
+  if(pc) pc.textContent = imgs.length > 1 ? ("Photo " + (idx + 1) + " of " + imgs.length) : "";
+  var hint = byId("qvSpinHint");
+  if(hint) hint.style.display = imgs.length > 1 ? "" : "none";
+  var multi = imgs.length > 1;
+  var pv = byId("qvPrev"), nx = byId("qvNext");
+  if(pv) pv.style.display = multi ? "" : "none";
+  if(nx) nx.style.display = multi ? "" : "none";
 }
 function syncRdSelect(){
   var p = railDetail; if(!p) return;
@@ -1516,12 +1584,15 @@ function closeSearch(){
     if(!dragging) return;
     dragging = false;
     if(moved < 6 && downItem){
-      /* a tap, not a drag: open the piece that was pressed */
+      /* a tap, not a drag: open Quick View for the piece that was
+         pressed (2026-11-19 — rail taps used to open the spin detail
+         view; the owner wants the tap to go straight to quick view
+         and buy, with the spin inside Quick View instead) */
       var id = +downItem.getAttribute("data-rail");
       downItem = null;
       vp.classList.remove("dragging");
       clickGuard = Date.now();
-      openRailDetail(id);
+      openQV(id);
       return;
     }
     downItem = null;
@@ -1575,7 +1646,7 @@ function closeSearch(){
   });
   window.addEventListener("pointerup", railDragStop);
   window.addEventListener("pointercancel", railDragStop);
-  /* Tap / click opens the detail view. Mouse taps are handled in
+  /* Tap / click opens Quick View. Mouse taps are handled in
      railDragStop above (pointer capture retargets the click), so this
      only needs to fire for touch taps and keyboard clicks. */
   vp.addEventListener("click", function(e){
@@ -1583,7 +1654,7 @@ function closeSearch(){
     if(moved >= 6){ moved = 0; return; }
     moved = 0;
     var item = e.target.closest ? e.target.closest("[data-rail]") : null;
-    if(item) openRailDetail(+item.getAttribute("data-rail"));
+    if(item) openQV(+item.getAttribute("data-rail"));
   });
   /* No vertical-wheel hijack: a mouse wheel / two-finger vertical swipe
      scrolls the PAGE (so laptop users can reach the category sections
@@ -1592,7 +1663,7 @@ function closeSearch(){
   vp.addEventListener("keydown", function(e){
     if((e.key === "Enter" || e.key === " ") && e.target.closest){
       var item = e.target.closest("[data-rail]");
-      if(item){ e.preventDefault(); openRailDetail(+item.getAttribute("data-rail")); }
+      if(item){ e.preventDefault(); openQV(+item.getAttribute("data-rail")); }
     }
   });
   /* Pointer-driven 3D tilt on rail garments — the piece leans toward
@@ -1619,17 +1690,19 @@ function closeSearch(){
   byId("railClose").addEventListener("click", closeRailDetail);
   byId("railPrev").addEventListener("click", function(){ railStep(-1); });
   byId("railNext").addEventListener("click", function(){ railStep(1); });
-  /* Photo browser: dots spin the ring to that photo; dragging the
-     shirt turns it in 3D through the owner's own photos. A tap (no
-     drag) advances one photo. No FRONT/BACK labels — the owner
+  /* Photo browser (retired detail view's dots — kept, the element is
+     hidden now): dots spin the ring to that photo. The live controls
+     are Quick View's thumbnails + ‹ › arrows. Dragging the shirt in
+     Quick View turns it in 3D through the owner's own photos. A tap
+     (no drag) advances one photo. No FRONT/BACK labels — the owner
      uploads front angles only, so no photo is a "back" view. */
   byId("rdDots").addEventListener("click", function(e){
     var b = e.target.closest("[data-photo]"); if(!b) return;
     setSpinPhoto(+b.getAttribute("data-photo"), true, 0);
   });
-  var spinEl = byId("rdSpin");
+  var spinEl = byId("qvSpin");
   spinEl.addEventListener("pointerdown", function(e){
-    if(!railDetail) return;
+    if(!spinProd) return;
     /* Same native-drag guard as the rail: a drag that begins on a
        shirt photo must turn the ring, not start a browser image drag. */
     e.preventDefault();
@@ -1637,17 +1710,17 @@ function closeSearch(){
     spinLastX = e.clientX; spinLastY = e.clientY; spinLastT = performance.now(); spinVel = 0;
     spinEl.classList.add("dragging");
     try{ spinEl.setPointerCapture(e.pointerId); }catch(err){}
-    var inner = byId("rdSpinInner"); if(inner) inner.style.transition = "";
+    var inner = byId("qvSpinInner"); if(inner) inner.style.transition = "";
     cancelAnimationFrame(spinRaf); spinRaf = null;
   });
   spinEl.addEventListener("pointermove", function(e){
-    if(!spinDragging || !railDetail) return;
+    if(!spinDragging || !spinProd) return;
     var dx = e.clientX - spinLastX, dy = e.clientY - spinLastY;
     spinLastX = e.clientX; spinLastY = e.clientY;
     var now = performance.now(), dt = Math.max(1, now - spinLastT); spinLastT = now;
     spinVel = dx / dt;
     spinMoved += Math.abs(dx) + Math.abs(dy);
-    var n = prodImages(railDetail).length;
+    var n = prodImages(spinProd).length;
     if(n > 1) spinAngle += dx * 0.4;
     spinTiltX = Math.max(-8, Math.min(8, spinTiltX + dy * 0.02));
     applySpin();
@@ -1657,7 +1730,7 @@ function closeSearch(){
     if(!spinDragging) return;
     spinDragging = false;
     spinEl.classList.remove("dragging");
-    var p = railDetail; if(!p) return;
+    var p = spinProd; if(!p) return;
     var n = prodImages(p).length;
     if(spinMoved < 6){
       /* tap: advance one photo forward (the ring turns one step back,
@@ -1718,8 +1791,8 @@ function closeSearch(){
   byId("searchOverlay").addEventListener("click", function(e){ if(e.target===this) closeSearch(); });
 })();
 
-/* Category sections below the rail: tap a piece to open it in the
-   detail view; "View all" opens the search overlay filtered to it. */
+/* Category sections below the rail: tap a piece to open Quick View;
+   "View all" opens the search overlay filtered to it. */
 (function(){
   var host = byId("catSections"); if(!host) return;
   host.addEventListener("click", function(e){
@@ -1738,19 +1811,19 @@ function closeSearch(){
       return;
     }
     var card = e.target.closest ? e.target.closest("[data-rail]") : null;
-    if(card) openRailDetail(+card.getAttribute("data-rail"));
+    if(card) openQV(+card.getAttribute("data-rail"));
   });
   host.addEventListener("keydown", function(e){
     if((e.key === "Enter" || e.key === " ") && e.target.closest){
       var card = e.target.closest("[data-rail]");
-      if(card){ e.preventDefault(); openRailDetail(+card.getAttribute("data-rail")); }
+      if(card){ e.preventDefault(); openQV(+card.getAttribute("data-rail")); }
     }
   });
 })();
 
 window.addEventListener("resize", function(){
   clearTimeout(window._railRsT);
-  window._railRsT = setTimeout(function(){ if(LIVE_CATALOG){ layoutRail(); updateRailCentre(); } if(railDetail){ buildSpinFaces(); applySpin(); } }, 150);
+  window._railRsT = setTimeout(function(){ if(LIVE_CATALOG){ layoutRail(); updateRailCentre(); } if(spinProd){ buildSpinFaces(); applySpin(); } }, 150);
 });
 
 renderRail();
