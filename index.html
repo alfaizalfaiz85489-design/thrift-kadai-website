@@ -887,6 +887,16 @@ function deliveryText(){
   var a = new Date(Date.now() + 3*864e5), b = new Date(Date.now() + 7*864e5);
   return "Order today and get it between <strong>" + a.toLocaleDateString("en-IN", f) + " – " + b.toLocaleDateString("en-IN", f) + "</strong>. Store pickup in Avaniyapuram is same-day once we confirm on WhatsApp.";
 }
+/* Low-stock note: per-product `lowNote` (Firestore). No field at all ->
+   the default "thrift pieces don't restock." line; an empty string ->
+   just "Only N left"; any other text -> "Only N left — <that text>". */
+function lowNoteText(p){
+  if(p.stock===0) return "This piece is sold out. Ask us on WhatsApp — we hunt similar styles every week.";
+  if(p.stock>2) return "";
+  var base = "Only " + p.stock + " left";
+  if(typeof p.lowNote === "string") return p.lowNote === "" ? base : base + " — " + p.lowNote;
+  return base + " — thrift pieces don't restock.";
+}
 function openQV(id){
   var p = prod(id); if(!p) return;
   qv = { id:id, size:null, qty:1, img:0 };
@@ -901,7 +911,7 @@ function openQV(id){
   byId("qvPrice").textContent = money(p.price);
   byId("qvMrp").textContent = money(p.mrp);
   byId("qvOff").textContent = offPct(p) + "% off";
-  byId("qvLow").textContent = p.stock===0 ? "This piece is sold out. Ask us on WhatsApp — we hunt similar styles every week." : (p.stock<=2 ? "Only " + p.stock + " left — thrift pieces don't restock." : "");
+  byId("qvLow").textContent = lowNoteText(p);
   byId("qvSizes").innerHTML = p.sizes.map(function(s){
     var q = sizeQty(p, s), out = q === 0;
     return '<button class="size-btn'+(out?" out":"")+'" data-size="'+s+'" '+(out?"disabled":"")+'>'+s+(out?"":" ("+q+")")+'</button>';
@@ -1193,7 +1203,8 @@ function loadSheetCatalog(){
         outSizes: splitList(v(5)),
         stock: Math.round(sheetNum(v(6), 0)),
         isNew: String(v(7)||"").trim().toLowerCase() === "yes",
-        desc: String(v(9)||"").trim()
+        desc: String(v(9)||"").trim(),
+        lowNote: null
       });
     });
     if(!list.length){ CATALOG_ERROR = true; renderRail(); renderCatalog(); return; }
@@ -1235,7 +1246,8 @@ function firestoreProducts(){
             alt: d.alt || d.name || "",
             sizes: d.sizes || [], outSizes: d.outSizes || [], sizeStock: d.sizeStock || null,
             images: (d.images || []).map(function(u){ return sheetImg(u); }),
-            stock: +d.stock || 0, isNew: !!d.isNew, desc: d.desc || ""
+            stock: +d.stock || 0, isNew: !!d.isNew, desc: d.desc || "",
+            lowNote: (typeof d.lowNote === "string" ? d.lowNote : null)
           });
         });
         resolve(list.length ? list : null);

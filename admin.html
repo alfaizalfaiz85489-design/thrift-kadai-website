@@ -471,6 +471,7 @@ footer p{color:var(--onblack-muted);font-size:14px;line-height:1.65;margin:0}
       <div class="fld fld-full"><label for="fImgPick">Or add a website photo</label>
         <select id="fImgPick"><option value="">— choose a photo to add —</option></select></div>
       <div class="fld fld-full"><label for="fDesc">Short description</label><textarea id="fDesc" placeholder="One or two lines about this piece"></textarea></div>
+      <div class="fld fld-full"><label for="fLowNote">Low-stock note — shown after "Only 1 left" (leave blank to show just "Only 1 left")</label><input id="fLowNote" type="text" placeholder="e.g. thrift pieces don't restock" /></div>
       <div class="fld"><label class="check-row"><input id="fNew" type="checkbox" /> New drop (shows in New Drop)</label></div>
       <div class="fld" style="display:flex;gap:10px;align-items:flex-end;justify-content:flex-end">
         <button class="btn btn-outline" id="editCancel">Cancel</button>
@@ -811,6 +812,7 @@ function openEdit(docId){
   byId("fImgUpload").value = "";
   byId("fImgStatus").textContent = "";
   byId("fDesc").value = p ? (p.desc||"") : "";
+  byId("fLowNote").value = p ? (typeof p.lowNote === "string" ? p.lowNote : "") : "";
   byId("fNew").checked = p ? !!p.isNew : false;
   byId("editModal").classList.add("open");
 }
@@ -859,7 +861,8 @@ byId("editSave").addEventListener("click", function(){
     outSizes: editSizes.filter(function(s){ return (editQty[s]||0) === 0; }),
     stock: totalStock,
     isNew: byId("fNew").checked,
-    desc: byId("fDesc").value.trim()
+    desc: byId("fDesc").value.trim(),
+    lowNote: byId("fLowNote").value.trim()
   };
   var btn = byId("editSave");
   btn.textContent = "Saving…";
